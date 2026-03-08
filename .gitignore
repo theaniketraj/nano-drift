@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+packages/*/out/
+packages/*/dist/
+*.vsix
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code test artifacts
+.vscode-test/
+
+# Environment
+.env
+.env.local
+
+# Project private files
+DEVELOPMENT_PLAN.md

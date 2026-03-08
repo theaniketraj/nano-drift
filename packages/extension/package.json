@@ -1,0 +1,120 @@
+{
+  "name": "nano-drift",
+  "displayName": "Nano Drift",
+  "description": "Android development at your own pace — build, deploy, and mirror your device inside VS Code.",
+  "version": "0.1.0",
+  "publisher": "nano-drift",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.87.0",
+    "node": ">=18.0.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["android", "adb", "emulator", "mobile", "drift"],
+  "activationEvents": [
+    "workspaceContains:**/AndroidManifest.xml",
+    "workspaceContains:**/build.gradle",
+    "workspaceContains:**/build.gradle.kts"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nanoDrift.runOnTheFly",
+        "title": "Run on the Fly",
+        "category": "Android",
+        "icon": "$(run)"
+      },
+      {
+        "command": "nanoDrift.selectDevice",
+        "title": "Select Active Device",
+        "category": "Android",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "nanoDrift.startEmulator",
+        "title": "Start Headless Emulator",
+        "category": "Android",
+        "icon": "$(vm)"
+      },
+      {
+        "command": "nanoDrift.connectWifi",
+        "title": "Connect Device over Wi-Fi",
+        "category": "Android",
+        "icon": "$(wifi)"
+      },
+      {
+        "command": "nanoDrift.showDeviceScreen",
+        "title": "Show Device Screen",
+        "category": "Android",
+        "icon": "$(screen-normal)"
+      },
+      {
+        "command": "nanoDrift.listDevices",
+        "title": "List Connected Devices",
+        "category": "Android"
+      },
+      {
+        "command": "nanoDrift.stopDaemon",
+        "title": "Stop Daemon",
+        "category": "Android"
+      }
+    ],
+    "configuration": {
+      "title": "Nano Drift",
+      "properties": {
+        "nanoDrift.androidHome": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Android SDK root. Leave empty to use the ANDROID_HOME environment variable."
+        },
+        "nanoDrift.daemonPort": {
+          "type": "number",
+          "default": 27183,
+          "description": "WebSocket port used by the Nano Drift daemon."
+        },
+        "nanoDrift.autoRunOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically build and deploy when a source file is saved."
+        },
+        "nanoDrift.gradleArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["installDebug", "--parallel"],
+          "description": "Gradle task and extra arguments for the build command."
+        },
+        "nanoDrift.packageName": {
+          "type": "string",
+          "default": "",
+          "description": "Android application package name (e.g. com.example.myapp). Leave empty to auto-detect from AndroidManifest.xml."
+        }
+      }
+    },
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "nanoDrift.runOnTheFly",
+          "when": "nanoDrift.active",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc --watch -p ./",
+    "build": "npm run compile",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.87.0",
+    "@types/ws": "^8.5.10"
+  }
+}

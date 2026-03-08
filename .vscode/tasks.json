@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile-extension",
+            "type": "shell",
+            "command": "cd packages/extension && npx tsc -p ./",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$tsc"
+        },
+        {
+            "label": "compile-daemon",
+            "type": "shell",
+            "command": "cd packages/daemon && npx tsc -p ./",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$tsc"
+        },
+        {
+            "label": "watch-extension",
+            "type": "shell",
+            "command": "cd packages/extension && npx tsc --watch -p ./",
+            "group": "build",
+            "isBackground": true,
+            "presentation": { "reveal": "never" },
+            "problemMatcher": "$tsc-watch"
+        },
+        {
+            "label": "watch-daemon",
+            "type": "shell",
+            "command": "cd packages/daemon && npx tsc --watch -p ./",
+            "group": "build",
+            "isBackground": true,
+            "presentation": { "reveal": "never" },
+            "problemMatcher": "$tsc-watch"
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/packages/extension"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/packages/extension/out/**/*.js"
+            ],
+            "preLaunchTask": "compile-extension",
+            "sourceMaps": true,
+            "smartStep": true
+        },
+        {
+            "name": "Run Daemon",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/packages/daemon/out/index.js",
+            "args": ["--port", "27183"],
+            "preLaunchTask": "compile-daemon",
+            "outFiles": [
+                "${workspaceFolder}/packages/daemon/out/**/*.js"
+            ],
+            "sourceMaps": true,
+            "console": "integratedTerminal"
+        }
+    ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "nano-drift",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Android development at your own pace — build, deploy, and mirror inside VS Code.",
+  "workspaces": [
+    "packages/extension",
+    "packages/daemon"
+  ],
+  "scripts": {
+    "compile": "npm run compile --workspaces --if-present",
+    "watch": "npm run watch --workspaces --if-present",
+    "build": "npm run compile",
+    "lint": "eslint \"packages/*/src/**/*.ts\"",
+    "clean": "npx rimraf packages/*/out"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.4.0"
+  }
+}

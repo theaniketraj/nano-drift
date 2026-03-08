@@ -1,0 +1,25 @@
+{
+  "name": "@nano-drift/daemon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nano Drift — build and ADB orchestration daemon.",
+  "main": "./out/index.js",
+  "bin": {
+    "nano-drift-daemon": "./out/index.js"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc --watch -p ./",
+    "build": "npm run compile",
+    "start": "node ./out/index.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "commander": "^12.0.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/ws": "^8.5.10"
+  }
+}
