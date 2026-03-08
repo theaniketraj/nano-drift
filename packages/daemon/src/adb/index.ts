@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const execFileAsync = promisify(execFile);
 
@@ -106,18 +107,54 @@ export class AdbManager {
     //  App control
     // ------------------------------------------------------------------ //
 
-    async launch(serial: string, packageName?: string): Promise<void> {
-        const pkg = packageName ?? await this.detectPackage();
-        // Try the conventional main activity naming
-        const component = `${pkg}/.MainActivity`;
-        await this.exec('-s', serial, 'shell', 'am', 'start', '-n', component);
+    async firstOnlineDevice(): Promise<string | undefined> {
+        const all = await this.listDevices();
+        return all.find((d) => d.state === 'device')?.serial;
     }
 
-    private async detectPackage(): Promise<string> {
-        // Phase 1: let users supply the package name via settings.
-        // Auto-detection (parsing AndroidManifest.xml) lands in Phase 2.
+    async launch(serial: string, packageName?: string): Promise<void> {
+        const pkg = packageName ?? await this.detectPackage();
+        // adb shell monkey with 0 events is the most reliable cold-start trigger:
+        //   adb shell am start -n pkg/.MainActivity  (fallback if monkey unavailable)
+        try {
+            await this.exec(
+                '-s', serial, 'shell', 'am', 'start',
+                '-a', 'android.intent.action.MAIN',
+                '-c', 'android.intent.category.LAUNCHER',
+                pkg
+            );
+        } catch {
+            // Fallback: conventional component name
+            const component = `${pkg}/.MainActivity`;
+            await this.exec('-s', serial, 'shell', 'am', 'start', '-n', component);
+        }
+    }
+
+    /**
+     * Detect the Android application package name from AndroidManifest.xml.
+     * Looks in common locations relative to `projectPath`.
+     */
+    async detectPackage(projectPath?: string): Promise<string> {
+        if (!projectPath) {
+            throw new Error(
+                'Set "nanoDrift.packageName" in VS Code settings or open an Android project.'
+            );
+        }
+        const candidates = [
+            path.join(projectPath, 'app', 'src', 'main', 'AndroidManifest.xml'),
+            path.join(projectPath, 'src', 'main', 'AndroidManifest.xml'),
+            path.join(projectPath, 'AndroidManifest.xml'),
+        ];
+        for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+                const content = fs.readFileSync(candidate, 'utf-8');
+                // Match: package="com.example.myapp" or package='com.example.myapp'
+                const match = content.match(/package\s*=\s*["']([^"']+)["']/);
+                if (match?.[1]) return match[1];
+            }
+        }
         throw new Error(
-            'Auto-detect of package name is not yet implemented. ' +
+            'Could not detect package name from AndroidManifest.xml. ' +
             'Set "nanoDrift.packageName" in VS Code settings.'
         );
     }

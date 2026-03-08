@@ -1,8 +1,9 @@
 import * as http from 'http';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { AdbManager } from './adb';
-import { GradleRunner } from './gradle';
+import { GradleRunner, BuildError } from './gradle';
 import { ScreenStreamer } from './screen';
+import { FileWatcher } from './watcher';
 
 type RpcHandler = (params: unknown) => Promise<unknown>;
 
@@ -18,9 +19,15 @@ interface RpcResponse {
     error?: string;
 }
 
+export interface WatcherOptions {
+    projectPath: string;
+    packageName?: string;
+    gradleArgs: string[];
+}
+
 /**
  * WebSocket server that exposes two endpoints:
- *   /rpc     — JSON-RPC 2.0-style request/response channel
+ *   /rpc     — JSON-RPC request/response channel + push notifications
  *   /screen  — binary frame stream (PNG screenshots)
  */
 export class DaemonServer {
@@ -29,7 +36,15 @@ export class DaemonServer {
     private readonly adb: AdbManager;
     private readonly gradle: GradleRunner;
     private readonly screen: ScreenStreamer;
+    private readonly watcher: FileWatcher;
     private readonly handlers = new Map<string, RpcHandler>();
+
+    /** All open RPC WebSocket connections — used for push broadcasts. */
+    private readonly rpcClients = new Set<WebSocket>();
+
+    private buildInProgress = false;
+    private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    private watcherOptions: WatcherOptions | undefined;
 
     constructor(private readonly port: number) {
         this.httpServer = http.createServer();
@@ -37,6 +52,7 @@ export class DaemonServer {
         this.adb = new AdbManager();
         this.gradle = new GradleRunner();
         this.screen = new ScreenStreamer(this.adb);
+        this.watcher = new FileWatcher();
 
         this.registerHandlers();
 
@@ -45,9 +61,73 @@ export class DaemonServer {
             if (url.startsWith('/screen')) {
                 this.screen.addClient(ws);
             } else {
+                this.rpcClients.add(ws);
+                ws.on('close', () => this.rpcClients.delete(ws));
                 this.handleRpcClient(ws);
             }
         });
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Push broadcast
+    // ------------------------------------------------------------------ //
+
+    push(method: string, params: unknown): void {
+        const frame = JSON.stringify({ method, params });
+        for (const client of this.rpcClients) {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(frame);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Auto build-deploy cycle (triggered by file watcher)
+    // ------------------------------------------------------------------ //
+
+    private scheduleAutoBuild(opts: WatcherOptions): void {
+        if (this.debounceTimer !== undefined) clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            void this.runBuildCycle(opts);
+        }, 300);
+    }
+
+    private async runBuildCycle(opts: WatcherOptions): Promise<void> {
+        if (this.buildInProgress) return;
+        this.buildInProgress = true;
+
+        try {
+            this.push('build.progress', { stage: 'building', projectPath: opts.projectPath });
+            console.log(`[nano-drift-daemon] Build started: ${opts.projectPath}`);
+
+            const errors = await this.gradle.build(
+                opts.projectPath,
+                opts.gradleArgs,
+                (line) => this.push('build.progress', { stage: 'output', line })
+            );
+
+            this.push('build.progress', { stage: 'deploying' });
+            console.log('[nano-drift-daemon] Deploying…');
+
+            const serial =
+                this.adb.getActiveDevice() ??
+                await this.adb.firstOnlineDevice();
+
+            if (!serial) throw new Error('No device available for deployment.');
+
+            await this.adb.launch(serial, opts.packageName);
+
+            this.push('build.progress', { stage: 'done', errors });
+            console.log('[nano-drift-daemon] Deployed successfully.');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            const buildErrors: BuildError[] =
+                (err as { buildErrors?: BuildError[] }).buildErrors ?? [];
+            this.push('build.progress', { stage: 'error', message, errors: buildErrors });
+            console.error('[nano-drift-daemon] Build failed:', message);
+        } finally {
+            this.buildInProgress = false;
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -80,8 +160,8 @@ export class DaemonServer {
         });
 
         this.reg('adb.launch', (p) => {
-            const { serial } = p as { serial: string };
-            return this.adb.launch(serial);
+            const { serial, packageName } = p as { serial: string; packageName?: string };
+            return this.adb.launch(serial, packageName);
         });
 
         this.reg('adb.tap', (p) => {
@@ -97,8 +177,55 @@ export class DaemonServer {
         });
 
         this.reg('gradle.build', (p) => {
-            const { projectPath, args } = p as { projectPath: string; args: string[] };
-            return this.gradle.build(projectPath, args);
+            const { projectPath, args, packageName } = p as {
+                projectPath: string;
+                args: string[];
+                packageName?: string;
+            };
+            return this.gradle
+                .build(projectPath, args, (line) =>
+                    this.push('build.progress', { stage: 'output', line })
+                )
+                .then(async (errors) => {
+                    // Auto-launch after a manual build too
+                    const serial =
+                        this.adb.getActiveDevice() ??
+                        await this.adb.firstOnlineDevice();
+                    if (serial) {
+                        await this.adb.launch(serial, packageName);
+                    }
+                    return errors;
+                });
+        });
+
+        this.reg('watcher.start', (p) => {
+            const { projectPath, packageName, gradleArgs } = p as {
+                projectPath: string;
+                packageName?: string;
+                gradleArgs?: string[];
+            };
+            this.watcherOptions = {
+                projectPath,
+                packageName,
+                gradleArgs: gradleArgs ?? ['installDebug', '--parallel'],
+            };
+            this.watcher.watch(projectPath, (_file) => {
+                this.scheduleAutoBuild(this.watcherOptions!);
+            });
+            console.log(`[nano-drift-daemon] Watching ${projectPath}`);
+            return Promise.resolve(null);
+        });
+
+        this.reg('watcher.stop', () => {
+            this.watcher.stop();
+            this.watcherOptions = undefined;
+            console.log('[nano-drift-daemon] Watcher stopped.');
+            return Promise.resolve(null);
+        });
+
+        this.reg('adb.detectPackage', (p) => {
+            const { projectPath } = p as { projectPath: string };
+            return this.adb.detectPackage(projectPath);
         });
     }
 
@@ -150,8 +277,10 @@ export class DaemonServer {
     }
 
     stop(): void {
+        this.watcher.stop();
         this.screen.stop();
         this.wss.close();
         this.httpServer.close();
     }
 }
+

@@ -10,8 +10,29 @@ export interface DeviceInfo {
     state: string;
 }
 
+export interface BuildError {
+    file: string;
+    line: number;
+    column: number;
+    severity: 'error' | 'warning';
+    message: string;
+}
+
+export type BuildStage = 'building' | 'output' | 'deploying' | 'done' | 'error';
+
+export interface BuildProgressEvent {
+    stage: BuildStage;
+    /** Present when stage === 'output' */
+    line?: string;
+    /** Present when stage === 'done' or 'error' */
+    errors?: BuildError[];
+    /** Present when stage === 'error' */
+    message?: string;
+    projectPath?: string;
+}
+
 interface RpcMessage {
-    id: string;
+    id?: string;
     method?: string;
     result?: unknown;
     error?: string;
@@ -29,11 +50,14 @@ export class DaemonClient implements vscode.Disposable {
     private daemonProcess: cp.ChildProcess | undefined;
     private readonly outputChannel: vscode.OutputChannel;
 
+    private readonly _onBuildProgress = new vscode.EventEmitter<BuildProgressEvent>();
+    readonly onBuildProgress = this._onBuildProgress.event;
+
     constructor(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('nanoDrift');
         this.port = config.get<number>('daemonPort', 27183);
         this.outputChannel = vscode.window.createOutputChannel('Nano Drift');
-        context.subscriptions.push(this.outputChannel);
+        context.subscriptions.push(this.outputChannel, this._onBuildProgress);
     }
 
     showOutput(): void {
@@ -59,7 +83,7 @@ export class DaemonClient implements vscode.Disposable {
             const ws = new WebSocket(`ws://localhost:${this.port}/rpc`);
             ws.once('open', () => {
                 this.ws = ws;
-                ws.on('message', this.handlePush.bind(this));
+                ws.on('message', this.handleMessage.bind(this));
                 ws.on('close', () => { this.ws = undefined; });
                 resolve();
             });
@@ -99,18 +123,34 @@ export class DaemonClient implements vscode.Disposable {
     }
 
     // ------------------------------------------------------------------ //
-    //  Push message handler (future: build progress events)
+    //  Incoming message handler (RPC responses + push notifications)
     // ------------------------------------------------------------------ //
 
-    private handlePush(raw: WebSocket.RawData): void {
+    private handleMessage(raw: WebSocket.RawData): void {
+        let msg: RpcMessage;
         try {
-            const msg = JSON.parse(raw.toString()) as RpcMessage;
-            if (!msg.id) {
-                // Push notification from daemon
-                this.outputChannel.appendLine(`[daemon push] ${JSON.stringify(msg)}`);
-            }
+            msg = JSON.parse(raw.toString()) as RpcMessage;
         } catch {
-            // ignore malformed frames
+            return; // ignore malformed frames
+        }
+
+        if (!msg.id && msg.method) {
+            // Push notification from daemon (no id → not a response)
+            this.handlePush(msg.method, msg.params);
+        }
+        // Responses to RPC calls are handled inline in rpc() via per-call listeners
+    }
+
+    private handlePush(method: string, params: unknown): void {
+        if (method === 'build.progress') {
+            const event = params as BuildProgressEvent;
+            // Mirror each output line to the Output Channel
+            if (event.stage === 'output' && event.line) {
+                this.outputChannel.appendLine(event.line);
+            }
+            this._onBuildProgress.fire(event);
+        } else {
+            this.outputChannel.appendLine(`[daemon push] ${method}: ${JSON.stringify(params)}`);
         }
     }
 
@@ -169,10 +209,24 @@ export class DaemonClient implements vscode.Disposable {
         void this.rpc('devices.setActive', { serial });
     }
 
-    async build(projectPath: string): Promise<void> {
+    async detectPackage(projectPath: string): Promise<string> {
+        return this.rpc<string>('adb.detectPackage', { projectPath });
+    }
+
+    async startWatcher(projectPath: string, packageName?: string): Promise<void> {
         const config = vscode.workspace.getConfiguration('nanoDrift');
         const gradleArgs = config.get<string[]>('gradleArgs', ['installDebug', '--parallel']);
-        return this.rpc<void>('gradle.build', { projectPath, args: gradleArgs });
+        return this.rpc<void>('watcher.start', { projectPath, packageName, gradleArgs });
+    }
+
+    async stopWatcher(): Promise<void> {
+        return this.rpc<void>('watcher.stop');
+    }
+
+    async build(projectPath: string, packageName?: string): Promise<BuildError[]> {
+        const config = vscode.workspace.getConfiguration('nanoDrift');
+        const gradleArgs = config.get<string[]>('gradleArgs', ['installDebug', '--parallel']);
+        return this.rpc<BuildError[]>('gradle.build', { projectPath, args: gradleArgs, packageName });
     }
 
     async deploy(): Promise<void> {
@@ -201,6 +255,7 @@ export class DaemonClient implements vscode.Disposable {
 
     dispose(): void {
         void this.stop();
+        this._onBuildProgress.dispose();
         this.outputChannel.dispose();
     }
 }
@@ -208,3 +263,4 @@ export class DaemonClient implements vscode.Disposable {
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
+

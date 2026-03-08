@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { StatusBarManager } from '../statusBar';
 import { DaemonClient } from '../daemon/client';
+import { DiagnosticsManager } from '../diagnostics';
 import { runOnTheFly } from './runOnTheFly';
 import { selectDevice } from './selectDevice';
 import { showDeviceScreen } from './showDeviceScreen';
@@ -11,6 +12,7 @@ export interface CommandDeps {
     statusBarManager: StatusBarManager;
     daemonClient: DaemonClient;
     sdkPath: string | undefined;
+    diagnosticsManager: DiagnosticsManager;
 }
 
 export function registerCommands(
