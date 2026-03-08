@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import type { CommandDeps } from './index';
+import type { DeviceInfo } from '../daemon/client';
 
 export async function selectDevice(deps: CommandDeps): Promise<void> {
     const { statusBarManager, daemonClient } = deps;
 
-    let devices;
+    let devices: DeviceInfo[];
     try {
         devices = await daemonClient.listDevices();
     } catch {
