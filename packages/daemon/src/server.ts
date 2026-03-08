@@ -195,6 +195,21 @@ export class DaemonServer {
             return this.adb.waitForBoot(knownSerials);
         });
 
+        this.reg('screen.getSize', (p) => {
+            const { serial } = p as { serial: string };
+            return this.adb.getScreenSize(serial);
+        });
+
+        this.reg('adb.sendText', (p) => {
+            const { serial, text } = p as { serial: string; text: string };
+            return this.adb.sendText(serial, text);
+        });
+
+        this.reg('adb.sendKey', (p) => {
+            const { serial, keycode } = p as { serial: string; keycode: number };
+            return this.adb.sendKey(serial, keycode);
+        });
+
         this.reg('adb.launch', (p) => {
             const { serial, packageName } = p as { serial: string; packageName?: string };
             return this.adb.launch(serial, packageName);

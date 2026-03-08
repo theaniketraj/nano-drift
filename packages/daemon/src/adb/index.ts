@@ -225,6 +225,38 @@ export class AdbManager {
             String(x1), String(y1), String(x2), String(y2), String(durationMs)
         );
     }
+
+    /**
+     * Send a printable text string to the active device.
+     * Spaces are encoded as `%s` per the `adb shell input text` convention.
+     * Shell metacharacters are backslash-escaped.
+     */
+    async sendText(serial: string, text: string): Promise<void> {
+        const escaped = text.replace(/[ \\&|;<>()$`"']/g, (ch) =>
+            ch === ' ' ? '%s' : `\\${ch}`
+        );
+        await this.exec('-s', serial, 'shell', 'input', 'text', escaped);
+    }
+
+    /** Send an Android KeyEvent keycode (e.g. 66 = Enter, 67 = Backspace). */
+    async sendKey(serial: string, keycode: number): Promise<void> {
+        await this.exec('-s', serial, 'shell', 'input', 'keyevent', String(keycode));
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Screen
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Returns the current screen resolution of the device.
+     * Parses `adb shell wm size` output ("Physical size: WxH").
+     */
+    async getScreenSize(serial: string): Promise<{ width: number; height: number }> {
+        const output = await this.exec('-s', serial, 'shell', 'wm', 'size');
+        const match = output.match(/(\d+)x(\d+)/);
+        if (!match) throw new Error(`Could not parse screen size from: ${output}`);
+        return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
+    }
 }
 
 function sleep(ms: number): Promise<void> {

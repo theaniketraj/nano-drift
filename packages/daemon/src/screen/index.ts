@@ -6,15 +6,18 @@ import { AdbManager } from '../adb';
 /**
  * Streams device screen frames to all connected WebSocket /screen clients.
  *
- * Strategy (Phase 0/1): JPEG/PNG snapshots via `adb exec-out screencap -p`.
- * ~100 ms interval → ~10 fps, zero external binary dependencies.
+ * Frame rate is adaptive: the delay to the next capture is calculated as
+ * max(0, MIN_INTERVAL_MS - captureMs), capping throughput at ~15 fps while
+ * naturally slowing down when the device is slow to respond (back-pressure).
  *
  * Future (Phase 5): replace with H.264 stream from scrcpy / ws-scrcpy.
  */
 export class ScreenStreamer {
     private readonly clients = new Set<WebSocket>();
-    private tickInterval: ReturnType<typeof setInterval> | undefined;
-    private capturing = false;
+    private tickTimer: ReturnType<typeof setTimeout> | undefined;
+
+    /** Minimum interval between frame captures — caps effective fps at ~15. */
+    private static readonly MIN_INTERVAL_MS = 67;
 
     constructor(private readonly adb: AdbManager) {}
 
@@ -28,25 +31,34 @@ export class ScreenStreamer {
     }
 
     private startCapture(): void {
-        this.tickInterval = setInterval(() => {
-            void this.captureFrame();
-        }, 100);
+        void this.captureFrame();
+    }
+
+    private scheduleNext(captureMs: number): void {
+        const delay = Math.max(0, ScreenStreamer.MIN_INTERVAL_MS - captureMs);
+        this.tickTimer = setTimeout(() => void this.captureFrame(), delay);
     }
 
     private async captureFrame(): Promise<void> {
-        if (this.capturing) return;
-        const serial = this.adb.getActiveDevice();
-        if (!serial || this.clients.size === 0) return;
+        if (this.clients.size === 0) return;
 
-        this.capturing = true;
+        const serial = this.adb.getActiveDevice();
+        if (!serial) {
+            // No device yet — retry in 1 s
+            this.tickTimer = setTimeout(() => void this.captureFrame(), 1_000);
+            return;
+        }
+
+        const t0 = Date.now();
         try {
             const frame = await this.screencap(serial);
             this.broadcast(frame);
         } catch {
-            // Device may be temporarily unavailable; skip this frame
-        } finally {
-            this.capturing = false;
+            // Device temporarily unavailable; back off
+            this.tickTimer = setTimeout(() => void this.captureFrame(), 500);
+            return;
         }
+        this.scheduleNext(Date.now() - t0);
     }
 
     private screencap(serial: string): Promise<Buffer> {
@@ -80,9 +92,9 @@ export class ScreenStreamer {
     }
 
     private stopCapture(): void {
-        if (this.tickInterval !== undefined) {
-            clearInterval(this.tickInterval);
-            this.tickInterval = undefined;
+        if (this.tickTimer !== undefined) {
+            clearTimeout(this.tickTimer);
+            this.tickTimer = undefined;
         }
     }
 
@@ -91,3 +103,4 @@ export class ScreenStreamer {
         this.clients.clear();
     }
 }
+

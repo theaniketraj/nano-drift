@@ -227,6 +227,10 @@ export class DaemonClient implements vscode.Disposable {
         void this.rpc('devices.setActive', { serial });
     }
 
+    getActiveDevice(): string | undefined {
+        return this.activeDevice;
+    }
+
     async detectPackage(projectPath: string): Promise<string> {
         return this.rpc<string>('adb.detectPackage', { projectPath });
     }
@@ -262,6 +266,20 @@ export class DaemonClient implements vscode.Disposable {
 
     async sendSwipe(x1: number, y1: number, x2: number, y2: number): Promise<void> {
         return this.rpc<void>('adb.swipe', { serial: this.activeDevice, x1, y1, x2, y2 });
+    }
+
+    async sendText(text: string): Promise<void> {
+        if (!this.activeDevice) return;
+        return this.rpc<void>('adb.sendText', { serial: this.activeDevice, text });
+    }
+
+    async sendKey(keycode: number): Promise<void> {
+        if (!this.activeDevice) return;
+        return this.rpc<void>('adb.sendKey', { serial: this.activeDevice, keycode });
+    }
+
+    async getScreenSize(serial: string): Promise<{ width: number; height: number }> {
+        return this.rpc<{ width: number; height: number }>('screen.getSize', { serial });
     }
 
     async stop(): Promise<void> {
