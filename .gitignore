@@ -5,6 +5,8 @@ node_modules/
 packages/*/out/
 packages/*/dist/
 *.vsix
+.vscode
+.vscode-test/
 
 # Logs
 *.log
