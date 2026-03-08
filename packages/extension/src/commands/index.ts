@@ -9,6 +9,7 @@ import { startEmulator } from './startEmulator';
 import { connectWifi } from './connectWifi';
 
 export interface CommandDeps {
+    context: vscode.ExtensionContext;
     statusBarManager: StatusBarManager;
     daemonClient: DaemonClient;
     sdkPath: string | undefined;

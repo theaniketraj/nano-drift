@@ -1,6 +1,6 @@
 import * as http from 'http';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
-import { AdbManager } from './adb';
+import { AdbManager, DeviceInfo } from './adb';
 import { GradleRunner, BuildError } from './gradle';
 import { ScreenStreamer } from './screen';
 import { FileWatcher } from './watcher';
@@ -46,6 +46,10 @@ export class DaemonServer {
     private debounceTimer: ReturnType<typeof setTimeout> | undefined;
     private watcherOptions: WatcherOptions | undefined;
 
+    /** Device list polling (every 3 s) for plug/unplug detection. */
+    private devicePollInterval: ReturnType<typeof setInterval> | undefined;
+    private cachedDeviceSerials: string[] = [];
+
     constructor(private readonly port: number) {
         this.httpServer = http.createServer();
         this.wss = new WebSocketServer({ server: this.httpServer });
@@ -79,6 +83,28 @@ export class DaemonServer {
                 client.send(frame);
             }
         }
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Device list polling (plug/unplug detection)
+    // ------------------------------------------------------------------ //
+
+    private startDevicePolling(): void {
+        this.devicePollInterval = setInterval(() => {
+            void (async () => {
+                try {
+                    const devices: DeviceInfo[] = await this.adb.listDevices();
+                    const serials = devices.map((d) => d.serial).sort();
+                    const prev = this.cachedDeviceSerials;
+                    if (JSON.stringify(serials) !== JSON.stringify(prev)) {
+                        this.cachedDeviceSerials = serials;
+                        this.push('devices.changed', devices);
+                    }
+                } catch {
+                    // adb not available yet — ignore silently
+                }
+            })();
+        }, 3_000);
     }
 
     // ------------------------------------------------------------------ //
@@ -157,6 +183,16 @@ export class DaemonServer {
         this.reg('adb.connectWifi', (p) => {
             const { address } = p as { address: string };
             return this.adb.connectWifi(address);
+        });
+
+        this.reg('adb.pair', (p) => {
+            const { address, code } = p as { address: string; code: string };
+            return this.adb.pairDevice(address, code);
+        });
+
+        this.reg('emulator.waitForBoot', (p) => {
+            const { knownSerials } = p as { knownSerials: string[] };
+            return this.adb.waitForBoot(knownSerials);
         });
 
         this.reg('adb.launch', (p) => {
@@ -271,12 +307,19 @@ export class DaemonServer {
 
     start(): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.httpServer.listen(this.port, '127.0.0.1', () => resolve());
+            this.httpServer.listen(this.port, '127.0.0.1', () => {
+                this.startDevicePolling();
+                resolve();
+            });
             this.httpServer.once('error', reject);
         });
     }
 
     stop(): void {
+        if (this.devicePollInterval !== undefined) {
+            clearInterval(this.devicePollInterval);
+            this.devicePollInterval = undefined;
+        }
         this.watcher.stop();
         this.screen.stop();
         this.wss.close();

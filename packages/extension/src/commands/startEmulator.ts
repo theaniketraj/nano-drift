@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { CommandDeps } from './index';
 
 export async function startEmulator(deps: CommandDeps): Promise<void> {
-    const { daemonClient } = deps;
+    const { daemonClient, statusBarManager } = deps;
 
     let avds: string[];
     try {
@@ -34,16 +34,53 @@ export async function startEmulator(deps: CommandDeps): Promise<void> {
 
     if (!selected) return;
 
+    // Snapshot current device serials before starting the emulator so that
+    // waitForBoot can detect the newly spawned emulator-XXXX entry.
+    let knownSerials: string[] = [];
+    try {
+        knownSerials = (await daemonClient.listDevices()).map((d) => d.serial);
+    } catch {
+        // ignore — waitForBoot will still detect any new emulator
+    }
+
+    try {
+        await daemonClient.startEmulator(selected.label);
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to start emulator: ${msg}`);
+        return;
+    }
+
+    // Wait for the emulator to finish booting, showing cancellable progress.
+    let newSerial: string | undefined;
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: `Starting ${selected.label} headless…`,
-            cancellable: false,
+            title: `Waiting for "${selected.label}" to boot…`,
+            cancellable: true,
         },
-        () => daemonClient.startEmulator(selected.label)
+        async (_progress, token) => {
+            const bootPromise = daemonClient.waitForBoot(knownSerials).then((s) => {
+                newSerial = s;
+            });
+            // If the user cancels we stop waiting but don't kill the emulator.
+            await Promise.race([
+                bootPromise,
+                new Promise<void>((resolve) => token.onCancellationRequested(resolve)),
+            ]);
+        }
     );
 
-    vscode.window.showInformationMessage(
-        `Emulator "${selected.label}" is starting. Use "Select Active Device" once it boots.`
-    );
+    if (newSerial) {
+        daemonClient.setActiveDevice(newSerial);
+        statusBarManager.setDevice(selected.label, 'emulator');
+        vscode.window.showInformationMessage(
+            `Emulator "${selected.label}" is booted and set as the active device.`
+        );
+    } else {
+        // User cancelled the wait
+        vscode.window.showInformationMessage(
+            `Emulator "${selected.label}" is starting in the background. Use "Select Active Device" once it boots.`
+        );
+    }
 }

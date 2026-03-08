@@ -68,10 +68,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         })
     );
 
-    registerCommands(context, { statusBarManager, daemonClient, sdkPath, diagnosticsManager });
+    registerCommands(context, { context, statusBarManager, daemonClient, sdkPath, diagnosticsManager });
 
     await vscode.commands.executeCommand('setContext', 'nanoDrift.active', true);
     statusBarManager.setIdle();
+
+    // ------------------------------------------------------------------ //
+    //  Restore last-used device from workspace state
+    // ------------------------------------------------------------------ //
+    const lastSerial = context.workspaceState.get<string>('nanoDrift.lastDevice');
+    if (lastSerial) {
+        try {
+            const devices = await daemonClient.listDevices();
+            const match = devices.find((d) => d.serial === lastSerial);
+            if (match) {
+                daemonClient.setActiveDevice(match.serial);
+                statusBarManager.setDevice(match.name, match.type);
+                console.log(`[nano-drift] Restored last device: ${match.serial}`);
+            }
+        } catch {
+            // Daemon not yet up — the onDeviceListChanged subscription below will
+            // attempt restoration once the device list becomes available.
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    //  When the device list changes, restore persisted device if not yet set
+    // ------------------------------------------------------------------ //
+    const client = daemonClient;
+    context.subscriptions.push(
+        client.onDeviceListChanged((devices) => {
+            const savedSerial = context.workspaceState.get<string>('nanoDrift.lastDevice');
+            if (!savedSerial) return;
+            const match = devices.find((d) => d.serial === savedSerial);
+            if (match) {
+                client.setActiveDevice(match.serial);
+                statusBarManager?.setDevice(match.name, match.type);
+            }
+        })
+    );
 
     // ------------------------------------------------------------------ //
     //  Auto-start file watcher if enabled

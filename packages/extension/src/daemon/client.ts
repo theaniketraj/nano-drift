@@ -53,11 +53,14 @@ export class DaemonClient implements vscode.Disposable {
     private readonly _onBuildProgress = new vscode.EventEmitter<BuildProgressEvent>();
     readonly onBuildProgress = this._onBuildProgress.event;
 
+    private readonly _onDeviceListChanged = new vscode.EventEmitter<DeviceInfo[]>();
+    readonly onDeviceListChanged = this._onDeviceListChanged.event;
+
     constructor(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('nanoDrift');
         this.port = config.get<number>('daemonPort', 27183);
         this.outputChannel = vscode.window.createOutputChannel('Nano Drift');
-        context.subscriptions.push(this.outputChannel, this._onBuildProgress);
+        context.subscriptions.push(this.outputChannel, this._onBuildProgress, this._onDeviceListChanged);
     }
 
     showOutput(): void {
@@ -149,6 +152,8 @@ export class DaemonClient implements vscode.Disposable {
                 this.outputChannel.appendLine(event.line);
             }
             this._onBuildProgress.fire(event);
+        } else if (method === 'devices.changed') {
+            this._onDeviceListChanged.fire(params as DeviceInfo[]);
         } else {
             this.outputChannel.appendLine(`[daemon push] ${method}: ${JSON.stringify(params)}`);
         }
@@ -204,6 +209,19 @@ export class DaemonClient implements vscode.Disposable {
         return this.rpc<void>('adb.connectWifi', { address });
     }
 
+    async pairDevice(address: string, code: string): Promise<void> {
+        return this.rpc<void>('adb.pair', { address, code });
+    }
+
+    /**
+     * Waits for a newly launched emulator to boot.
+     * Pass the serials that existed *before* the emulator was started.
+     * Resolves with the new emulator's serial.
+     */
+    async waitForBoot(knownSerials: string[]): Promise<string> {
+        return this.rpc<string>('emulator.waitForBoot', { knownSerials });
+    }
+
     setActiveDevice(serial: string): void {
         this.activeDevice = serial;
         void this.rpc('devices.setActive', { serial });
@@ -256,6 +274,7 @@ export class DaemonClient implements vscode.Disposable {
     dispose(): void {
         void this.stop();
         this._onBuildProgress.dispose();
+        this._onDeviceListChanged.dispose();
         this.outputChannel.dispose();
     }
 }

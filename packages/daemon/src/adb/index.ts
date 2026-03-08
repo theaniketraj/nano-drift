@@ -103,6 +103,53 @@ export class AdbManager {
         }
     }
 
+    /** ADB 11+ wireless pairing: `adb pair <address> <code>` */
+    async pairDevice(address: string, code: string): Promise<void> {
+        const output = await this.exec('pair', address, code);
+        if (!output.toLowerCase().includes('successfully paired')) {
+            throw new Error(output || `Could not pair with ${address}`);
+        }
+    }
+
+    /**
+     * Waits for a newly launched emulator to finish booting.
+     * Pass the set of serials that existed *before* `startEmulator()` was called;
+     * this method detects the new `emulator-XXXX` serial and polls
+     * `sys.boot_completed` until it equals `"1"`.
+     * Resolves with the new serial, or rejects after 120 s.
+     */
+    async waitForBoot(knownSerials: string[]): Promise<string> {
+        const TIMEOUT_MS = 120_000;
+        const POLL_MS = 2_000;
+        const deadline = Date.now() + TIMEOUT_MS;
+
+        // Step 1 — wait for new emulator serial to appear
+        let newSerial: string | undefined;
+        while (!newSerial) {
+            if (Date.now() > deadline) {
+                throw new Error('Timed out waiting for emulator to appear in adb devices.');
+            }
+            const all = await this.listDevices();
+            newSerial = all
+                .filter((d) => d.serial.startsWith('emulator-'))
+                .find((d) => !knownSerials.includes(d.serial))
+                ?.serial;
+            if (!newSerial) await sleep(POLL_MS);
+        }
+
+        // Step 2 — wait for sys.boot_completed == "1"
+        while (Date.now() < deadline) {
+            try {
+                const val = await this.exec('-s', newSerial, 'shell', 'getprop', 'sys.boot_completed');
+                if (val.trim() === '1') return newSerial;
+            } catch {
+                // device not ready yet; keep polling
+            }
+            await sleep(POLL_MS);
+        }
+        throw new Error('Timed out waiting for emulator boot to complete.');
+    }
+
     // ------------------------------------------------------------------ //
     //  App control
     // ------------------------------------------------------------------ //
@@ -178,4 +225,8 @@ export class AdbManager {
             String(x1), String(y1), String(x2), String(y2), String(durationMs)
         );
     }
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }

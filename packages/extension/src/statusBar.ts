@@ -25,8 +25,9 @@ export class StatusBarManager {
         context.subscriptions.push(this.deviceItem, this.actionItem);
     }
 
-    setDevice(name: string): void {
-        this.deviceItem.text = `$(device-mobile) ${name}`;
+    setDevice(name: string, type?: 'emulator' | 'device'): void {
+        const icon = type === 'emulator' ? '$(vm)' : '$(device-mobile)';
+        this.deviceItem.text = `${icon} ${name}`;
         this.deviceItem.tooltip = 'Click to select a different device';
     }
 
