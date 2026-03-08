@@ -235,19 +235,36 @@ export class DaemonClient implements vscode.Disposable {
         return this.rpc<string>('adb.detectPackage', { projectPath });
     }
 
-    async startWatcher(projectPath: string, packageName?: string): Promise<void> {
+    /**
+     * Derives the Gradle arguments to use for a build.
+     * - If `nanoDrift.gradleArgs` contains a non-flag entry (e.g. 'installRelease'),
+     *   it is used as-is (full user override).
+     * - Otherwise the install task is derived from `nanoDrift.buildVariant`
+     *   (default 'debug' → 'installDebug') and any `--flag` entries in
+     *   `gradleArgs` are appended.
+     */
+    private resolveGradleArgs(): string[] {
         const config = vscode.workspace.getConfiguration('nanoDrift');
-        const gradleArgs = config.get<string[]>('gradleArgs', ['installDebug', '--parallel']);
+        const rawArgs = config.get<string[]>('gradleArgs', ['--parallel']);
+        const hasExplicitTask = rawArgs.some((a) => !a.startsWith('-'));
+        if (hasExplicitTask) return rawArgs;
+        const variant = config.get<string>('buildVariant', 'debug');
+        const cap = variant.charAt(0).toUpperCase() + variant.slice(1);
+        const flags = rawArgs.filter((a) => a.startsWith('-'));
+        return [`install${cap}`, ...flags];
+    }
+
+    async startWatcher(projectPath: string, packageName?: string): Promise<void> {
+        const gradleArgs = this.resolveGradleArgs();
         return this.rpc<void>('watcher.start', { projectPath, packageName, gradleArgs });
     }
 
-    async stopWatcher(): Promise<void> {
-        return this.rpc<void>('watcher.stop');
+    async stopWatcher(projectPath?: string): Promise<void> {
+        return this.rpc<void>('watcher.stop', projectPath ? { projectPath } : {});
     }
 
     async build(projectPath: string, packageName?: string): Promise<BuildError[]> {
-        const config = vscode.workspace.getConfiguration('nanoDrift');
-        const gradleArgs = config.get<string[]>('gradleArgs', ['installDebug', '--parallel']);
+        const gradleArgs = this.resolveGradleArgs();
         return this.rpc<BuildError[]>('gradle.build', { projectPath, args: gradleArgs, packageName });
     }
 

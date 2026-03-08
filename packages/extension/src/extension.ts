@@ -113,18 +113,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // ------------------------------------------------------------------ //
     await maybeStartWatcher(daemonClient);
 
+    // Handle workspace folders added/removed at runtime
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeWorkspaceFolders(async (e) => {
+            for (const removed of e.removed) {
+                await daemonClient?.stopWatcher(removed.uri.fsPath).catch(() => undefined);
+            }
+            for (const added of e.added) {
+                if (daemonClient) await maybeStartWatcherForFolder(daemonClient, added.uri.fsPath);
+            }
+        })
+    );
+
     // Re-evaluate watcher when settings change
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async (e) => {
-            if (e.affectsConfiguration('nanoDrift.autoRunOnSave')) {
+            const affectsWatcher =
+                e.affectsConfiguration('nanoDrift.autoRunOnSave') ||
+                e.affectsConfiguration('nanoDrift.buildVariant') ||
+                e.affectsConfiguration('nanoDrift.gradleArgs');
+            if (affectsWatcher) {
+                // Stop all watchers and restart based on current settings.
+                await daemonClient?.stopWatcher().catch(() => undefined);
                 const enabled = vscode.workspace
                     .getConfiguration('nanoDrift')
                     .get<boolean>('autoRunOnSave', true);
-                if (enabled) {
-                    await maybeStartWatcher(daemonClient!);
-                } else {
-                    await daemonClient?.stopWatcher().catch(() => undefined);
-                }
+                if (enabled) await maybeStartWatcher(daemonClient!);
             }
         })
     );
@@ -144,24 +158,27 @@ async function maybeStartWatcher(client: DaemonClient): Promise<void> {
     const config = vscode.workspace.getConfiguration('nanoDrift');
     if (!config.get<boolean>('autoRunOnSave', true)) return;
 
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspaceFolder) return;
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    for (const folder of folders) {
+        await maybeStartWatcherForFolder(client, folder.uri.fsPath);
+    }
+}
 
-    // Resolve package name: user setting takes priority, then auto-detect
+async function maybeStartWatcherForFolder(client: DaemonClient, folderPath: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration('nanoDrift');
     let packageName = config.get<string>('packageName', '').trim() || undefined;
     if (!packageName) {
         try {
-            packageName = await client.detectPackage(workspaceFolder);
-            console.log(`[nano-drift] Detected package: ${packageName}`);
+            packageName = await client.detectPackage(folderPath);
+            console.log(`[nano-drift] Detected package in ${folderPath}: ${packageName}`);
         } catch {
-            // Not an Android project or manifest not found — silently skip watcher
+            // Not an Android project or manifest not found — silently skip.
             return;
         }
     }
-
     try {
-        await client.startWatcher(workspaceFolder, packageName);
-        console.log(`[nano-drift] File watcher started for: ${workspaceFolder}`);
+        await client.startWatcher(folderPath, packageName);
+        console.log(`[nano-drift] File watcher started for: ${folderPath}`);
     } catch (err) {
         console.warn('[nano-drift] Could not start file watcher:', err);
     }

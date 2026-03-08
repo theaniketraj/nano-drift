@@ -36,15 +36,19 @@ export class DaemonServer {
     private readonly adb: AdbManager;
     private readonly gradle: GradleRunner;
     private readonly screen: ScreenStreamer;
-    private readonly watcher: FileWatcher;
     private readonly handlers = new Map<string, RpcHandler>();
 
     /** All open RPC WebSocket connections — used for push broadcasts. */
     private readonly rpcClients = new Set<WebSocket>();
 
-    private buildInProgress = false;
-    private debounceTimer: ReturnType<typeof setTimeout> | undefined;
-    private watcherOptions: WatcherOptions | undefined;
+    /** Per-project watcher instances (supports multi-root workspaces). */
+    private readonly watchers = new Map<string, FileWatcher>();
+    /** Per-project watcher options. */
+    private readonly watcherOptionsMap = new Map<string, WatcherOptions>();
+    /** Per-project build-in-progress flags. */
+    private readonly buildInProgress = new Map<string, boolean>();
+    /** Per-project debounce timers. */
+    private readonly debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     /** Device list polling (every 3 s) for plug/unplug detection. */
     private devicePollInterval: ReturnType<typeof setInterval> | undefined;
@@ -56,7 +60,6 @@ export class DaemonServer {
         this.adb = new AdbManager();
         this.gradle = new GradleRunner();
         this.screen = new ScreenStreamer(this.adb);
-        this.watcher = new FileWatcher();
 
         this.registerHandlers();
 
@@ -112,15 +115,20 @@ export class DaemonServer {
     // ------------------------------------------------------------------ //
 
     private scheduleAutoBuild(opts: WatcherOptions): void {
-        if (this.debounceTimer !== undefined) clearTimeout(this.debounceTimer);
-        this.debounceTimer = setTimeout(() => {
+        const key = opts.projectPath;
+        const existing = this.debounceTimers.get(key);
+        if (existing !== undefined) clearTimeout(existing);
+        const timer = setTimeout(() => {
+            this.debounceTimers.delete(key);
             void this.runBuildCycle(opts);
         }, 300);
+        this.debounceTimers.set(key, timer);
     }
 
     private async runBuildCycle(opts: WatcherOptions): Promise<void> {
-        if (this.buildInProgress) return;
-        this.buildInProgress = true;
+        const key = opts.projectPath;
+        if (this.buildInProgress.get(key)) return;
+        this.buildInProgress.set(key, true);
 
         try {
             this.push('build.progress', { stage: 'building', projectPath: opts.projectPath });
@@ -152,7 +160,7 @@ export class DaemonServer {
             this.push('build.progress', { stage: 'error', message, errors: buildErrors });
             console.error('[nano-drift-daemon] Build failed:', message);
         } finally {
-            this.buildInProgress = false;
+            this.buildInProgress.set(key, false);
         }
     }
 
@@ -255,22 +263,35 @@ export class DaemonServer {
                 packageName?: string;
                 gradleArgs?: string[];
             };
-            this.watcherOptions = {
+            const opts: WatcherOptions = {
                 projectPath,
                 packageName,
                 gradleArgs: gradleArgs ?? ['installDebug', '--parallel'],
             };
-            this.watcher.watch(projectPath, (_file) => {
-                this.scheduleAutoBuild(this.watcherOptions!);
-            });
+            // Stop existing watcher for this path before replacing it.
+            const existing = this.watchers.get(projectPath);
+            if (existing) { existing.stop(); this.watchers.delete(projectPath); }
+            const w = new FileWatcher();
+            w.watch(projectPath, () => this.scheduleAutoBuild(opts));
+            this.watchers.set(projectPath, w);
+            this.watcherOptionsMap.set(projectPath, opts);
             console.log(`[nano-drift-daemon] Watching ${projectPath}`);
             return Promise.resolve(null);
         });
 
-        this.reg('watcher.stop', () => {
-            this.watcher.stop();
-            this.watcherOptions = undefined;
-            console.log('[nano-drift-daemon] Watcher stopped.');
+        this.reg('watcher.stop', (p) => {
+            const { projectPath } = p as { projectPath?: string };
+            if (projectPath) {
+                const w = this.watchers.get(projectPath);
+                if (w) { w.stop(); this.watchers.delete(projectPath); }
+                this.watcherOptionsMap.delete(projectPath);
+                const t = this.debounceTimers.get(projectPath);
+                if (t !== undefined) { clearTimeout(t); this.debounceTimers.delete(projectPath); }
+                console.log(`[nano-drift-daemon] Watcher stopped for ${projectPath}`);
+            } else {
+                this.stopAllWatchers();
+                console.log('[nano-drift-daemon] All watchers stopped.');
+            }
             return Promise.resolve(null);
         });
 
@@ -330,12 +351,20 @@ export class DaemonServer {
         });
     }
 
+    private stopAllWatchers(): void {
+        for (const t of this.debounceTimers.values()) clearTimeout(t);
+        this.debounceTimers.clear();
+        for (const w of this.watchers.values()) w.stop();
+        this.watchers.clear();
+        this.watcherOptionsMap.clear();
+    }
+
     stop(): void {
         if (this.devicePollInterval !== undefined) {
             clearInterval(this.devicePollInterval);
             this.devicePollInterval = undefined;
         }
-        this.watcher.stop();
+        this.stopAllWatchers();
         this.screen.stop();
         this.wss.close();
         this.httpServer.close();

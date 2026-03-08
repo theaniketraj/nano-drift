@@ -12,6 +12,8 @@
   },
   "categories": ["Other"],
   "keywords": ["android", "adb", "emulator", "mobile", "drift"],
+  "icon": "images/icon.png",
+  "galleryBanner": { "color": "#0D0D0D", "theme": "dark" },
   "activationEvents": [
     "workspaceContains:**/AndroidManifest.xml",
     "workspaceContains:**/build.gradle",
@@ -82,8 +84,13 @@
         "nanoDrift.gradleArgs": {
           "type": "array",
           "items": { "type": "string" },
-          "default": ["installDebug", "--parallel"],
-          "description": "Gradle task and extra arguments for the build command."
+          "default": ["--parallel"],
+          "description": "Extra Gradle arguments (e.g. ['--no-daemon']). The install task is derived from nanoDrift.buildVariant unless this array contains an explicit task name."
+        },
+        "nanoDrift.buildVariant": {
+          "type": "string",
+          "default": "debug",
+          "description": "Android build variant to install. Determines the Gradle task — 'debug' \u2192 installDebug, 'release' \u2192 installRelease, 'staging' \u2192 installStaging, etc. Has no effect if nanoDrift.gradleArgs already contains an explicit task name."
         },
         "nanoDrift.packageName": {
           "type": "string",
