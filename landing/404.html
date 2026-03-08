@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Nano Drift</title>
+  <meta name="robots" content="noindex" />
+  <!-- Redirect SPA hash routes that land on 404 back to the root -->
+  <script>
+    // GitHub Pages serves 404.html for any unmatched path.
+    // If the path looks like a real sub-route, bounce back to root with a
+    // query param that the index page can read and restore (simple SPA trick).
+    const p = window.location.pathname;
+    const q = window.location.search;
+    const h = window.location.hash;
+    const redirect = '/' + (window.location.pathname.split('/')[1] || '');
+    sessionStorage.setItem('nd-redirect', p + q + h);
+    window.location.replace(redirect + '/?r=1' + (h ? h : ''));
+  </script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0d0d0d;
+      color: #ebebeb;
+      text-align: center;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .5rem; }
+    p  { color: #9a9a9a; font-size: .9375rem; }
+    a  { color: #ff6b35; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>Page not found</h1>
+    <p>Redirecting you back to <a href="./">Nano Drift</a>…</p>
+  </div>
+</body>
+</html>

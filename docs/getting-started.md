@@ -4,44 +4,6 @@ This guide walks you through every prerequisite, installation step, and first-ru
 
 ---
 
-## Contents
-
-- [Getting Started](#getting-started)
-  - [Contents](#contents)
-  - [1. Prerequisites](#1-prerequisites)
-    - [Required](#required)
-    - [Recommended](#recommended)
-    - [Environment Variable](#environment-variable)
-  - [2. Installing the Extension](#2-installing-the-extension)
-    - [From the VS Code Marketplace (recommended)](#from-the-vs-code-marketplace-recommended)
-    - [From a `.vsix` file (pre-release / self-built)](#from-a-vsix-file-pre-release--self-built)
-    - [From source (development mode)](#from-source-development-mode)
-  - [3. SDK Detection](#3-sdk-detection)
-  - [4. Opening an Android Project](#4-opening-an-android-project)
-  - [5. Connecting a Device](#5-connecting-a-device)
-    - [5a. Physical Device over USB](#5a-physical-device-over-usb)
-    - [5b. Physical Device over Wi-Fi](#5b-physical-device-over-wi-fi)
-    - [5c. Emulator (Android Virtual Device)](#5c-emulator-android-virtual-device)
-  - [6. Your First Drift Build](#6-your-first-drift-build)
-    - [What happens](#what-happens)
-    - [Build errors](#build-errors)
-  - [7. Enabling Auto-Run on Save](#7-enabling-auto-run-on-save)
-    - [Verify it is enabled](#verify-it-is-enabled)
-    - [Paths monitored](#paths-monitored)
-    - [Paths ignored](#paths-ignored)
-    - [Disabling auto-run](#disabling-auto-run)
-  - [8. Viewing the Device Screen](#8-viewing-the-device-screen)
-    - [Interacting with the device](#interacting-with-the-device)
-  - [9. Verifying the Daemon](#9-verifying-the-daemon)
-  - [10. Troubleshooting](#10-troubleshooting)
-    - [`adb: command not found` / no devices detected](#adb-command-not-found--no-devices-detected)
-    - [`Gradle wrapper not found`](#gradle-wrapper-not-found)
-    - [Build triggers unexpectedly / too frequently](#build-triggers-unexpectedly--too-frequently)
-    - [Webview screen panel shows "Daemon not reachable"](#webview-screen-panel-shows-daemon-not-reachable)
-    - [Package name not detected](#package-name-not-detected)
-
----
-
 ## 1. Prerequisites
 
 Before installing Nano Drift, confirm the following are present on your system:
@@ -122,7 +84,7 @@ If none are found, a warning notification appears:
 
 Click **Open Settings** to configure `nanoDrift.androidHome`. The `adb` and `emulator` binaries will be resolved relative to this path:
 
-```
+```xml
 $ANDROID_HOME/platform-tools/adb        (Linux / macOS)
 $ANDROID_HOME/platform-tools/adb.exe    (Windows)
 $ANDROID_HOME/emulator/emulator         (Linux / macOS)
@@ -143,7 +105,7 @@ Nano Drift activates automatically when VS Code detects any of these files in yo
 
 Simply open the **root** of your Android project (the directory containing `gradlew` / `gradlew.bat`) as a VS Code workspace folder.
 
-```
+```bash
 MyApp/                     ← open this folder in VS Code
 ├── app/
 │   ├── src/main/
@@ -156,7 +118,7 @@ MyApp/                     ← open this folder in VS Code
 
 Once activated, the Nano Drift status bar items appear in the bottom status bar:
 
-```
+```cmd
 $(device-mobile) No Device     $(run) Run on the Fly
 ```
 
@@ -217,7 +179,7 @@ With a device or emulator selected, trigger a build manually:
 
 **Option A — Command Palette**:
 
-```
+```cmd
 ⌘ ⇧P  (or Ctrl+Shift+P)  →  Android: Run on the Fly
 ```
 

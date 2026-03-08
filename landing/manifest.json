@@ -1,0 +1,29 @@
+{
+  "name": "Nano Drift",
+  "short_name": "Nano Drift",
+  "description": "Android development at your own pace — build, deploy, and mirror inside VS Code.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0d0d",
+  "theme_color": "#ff6b35",
+  "categories": ["developer", "productivity", "utilities"],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [
+    {
+      "platform": "itunes",
+      "url": "https://marketplace.visualstudio.com/search?term=nano+drift"
+    }
+  ],
+  "prefer_related_applications": false
+}

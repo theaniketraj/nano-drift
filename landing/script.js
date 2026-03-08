@@ -84,10 +84,18 @@ setTimeout(runTermAnim, 900);
 
 /* ── Routing ─────────────────────────────────────────────────── */
 function goLanding() {
-  document.body.classList.remove("docs", "mobile-nav-open", "docs-sidebar-open");
+  document.body.classList.remove(
+    "docs",
+    "mobile-nav-open",
+    "docs-sidebar-open",
+  );
   document.getElementById("nav-docs-btn").classList.remove("active");
-  document.getElementById("mobile-nav-panel")?.setAttribute("aria-hidden", "true");
-  document.getElementById("nav-hamburger")?.setAttribute("aria-expanded", "false");
+  document
+    .getElementById("mobile-nav-panel")
+    ?.setAttribute("aria-hidden", "true");
+  document
+    .getElementById("nav-hamburger")
+    ?.setAttribute("aria-expanded", "false");
   history.pushState(null, "", location.pathname);
   window.scrollTo(0, 0);
 }
@@ -96,8 +104,12 @@ function goDocs(docId) {
   document.body.classList.add("docs");
   document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
   document.getElementById("nav-docs-btn").classList.add("active");
-  document.getElementById("mobile-nav-panel")?.setAttribute("aria-hidden", "true");
-  document.getElementById("nav-hamburger")?.setAttribute("aria-expanded", "false");
+  document
+    .getElementById("mobile-nav-panel")
+    ?.setAttribute("aria-hidden", "true");
+  document
+    .getElementById("nav-hamburger")
+    ?.setAttribute("aria-expanded", "false");
   history.pushState(null, "", "#docs/" + docId);
   loadDoc(docId);
   window.scrollTo(0, 0);
@@ -165,7 +177,7 @@ document.querySelectorAll("[data-goto-doc]").forEach((el) => {
 /* ── Doc map ─────────────────────────────────────────────────── */
 // When served locally from project root (landing/ is a subfolder) use ../docs/
 // When deployed to GitHub Pages (landing/ is the site root) use docs/
-const DOCS_BASE = window.location.pathname.includes("/landing/")
+const DOCS_BASE = globalThis.location.pathname.includes("/landing/")
   ? "../docs/"
   : "docs/";
 
@@ -409,10 +421,14 @@ $sidebarBackdrop.addEventListener("click", () => {
 });
 
 // Close panels on resize to desktop
-window.addEventListener("resize", () => {
-  if (window.innerWidth > 900) {
-    document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
-    $mobileNavPanel.setAttribute("aria-hidden", "true");
-    $hamburger.setAttribute("aria-expanded", "false");
-  }
-}, { passive: true });
+window.addEventListener(
+  "resize",
+  () => {
+    if (window.innerWidth > 900) {
+      document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
+      $mobileNavPanel.setAttribute("aria-hidden", "true");
+      $hamburger.setAttribute("aria-expanded", "false");
+    }
+  },
+  { passive: true },
+);

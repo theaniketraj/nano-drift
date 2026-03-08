@@ -1,0 +1,48 @@
+# Nano Drift
+
+> Android development at your own pace — build, deploy, and mirror inside VS Code.
+
+Nano Drift is a free, open-source VS Code extension that collapses the Android
+build → deploy → observe loop to seconds. Save a source file and your device
+refreshes automatically — no terminals, no manual installs, no context switching.
+
+## What it does
+
+- **Drift Loop**: On every file save, Nano Drift detects the change (chokidar,
+  300 ms debounce), triggers a Gradle incremental build, pushes the APK via adb,
+  and launches the app — end-to-end in ~3 seconds on warm builds.
+- **Live Device Screen**: Mirrors your Android device or emulator inside a VS Code
+  Webview using scrcpy. Tap, swipe, and type without leaving the editor.
+- **Inline Diagnostics**: Kotlin/Java compiler errors are parsed and surfaced
+  directly in the VS Code Problems panel with source links.
+- **Device Management**: USB, Wi-Fi (Android 11+ pairing), and headless AVD
+  emulator support — all from the Command Palette.
+- **Build Variants**: Switch between debug, release, staging, or any custom
+  Gradle variant with a single setting.
+- **Multi-Root Workspace**: Independent watcher + build cycle per folder.
+
+## Architecture
+
+Nano Drift is a TypeScript monorepo: an `extension` package (VS Code API) and a
+`daemon` package (chokidar file watcher, Gradle runner, adb wrapper). They
+communicate over a lightweight JSON-RPC socket.
+
+## Docs
+
+- Overview: https://theaniketraj.github.io/nano-drift/#docs/index
+- Getting Started: https://theaniketraj.github.io/nano-drift/#docs/getting-started
+- Configuration: https://theaniketraj.github.io/nano-drift/#docs/configuration
+- Architecture: https://theaniketraj.github.io/nano-drift/#docs/architecture
+- RPC Protocol: https://theaniketraj.github.io/nano-drift/#docs/rpc-protocol
+- Extension Internals: https://theaniketraj.github.io/nano-drift/#docs/extension
+- Daemon Internals: https://theaniketraj.github.io/nano-drift/#docs/daemon
+- Contributing: https://theaniketraj.github.io/nano-drift/#docs/contributing
+
+## Links
+
+- Website: https://theaniketraj.github.io/nano-drift/
+- GitHub: https://github.com/theaniketraj/nano-drift
+- VS Code Marketplace: https://marketplace.visualstudio.com/search?term=nano+drift
+- License: MIT
+- Author: Aniket Raj (https://github.com/theaniketraj)
+- Version: 0.1.0

@@ -4,46 +4,9 @@ This document covers the VS Code extension package (`packages/extension`) in det
 
 ---
 
-## Contents
-
-- [Extension Internals](#extension-internals)
-  - [Contents](#contents)
-  - [1. Module Map](#1-module-map)
-  - [2. Activation — `extension.ts`](#2-activation--extensionts)
-    - [Activation sequence](#activation-sequence)
-    - [`maybeStartWatcher`](#maybestartwatcher)
-    - [`deactivate`](#deactivate)
-  - [3. DaemonClient — `daemon/client.ts`](#3-daemonclient--daemonclientts)
-    - [Key Types](#key-types)
-    - [Connection Management](#connection-management)
-    - [Message Routing](#message-routing)
-    - [Public API](#public-api)
-    - [Events](#events)
-  - [4. StatusBarManager — `statusBar.ts`](#4-statusbarmanager--statusbarts)
-    - [State Methods](#state-methods)
-  - [5. DiagnosticsManager — `diagnostics.ts`](#5-diagnosticsmanager--diagnosticsts)
-    - [`update(errors: BuildError[]): void`](#updateerrors-builderror-void)
-    - [`resolveUri(filePath: string): vscode.Uri`](#resolveurifilepath-string-vscodeuri)
-  - [6. SDK Utilities — `sdk.ts`](#6-sdk-utilities--sdkts)
-  - [7. Commands](#7-commands)
-    - [7a. `runOnTheFly`](#7a-runonthefly)
-    - [7b. `selectDevice`](#7b-selectdevice)
-    - [7c. `startEmulator`](#7c-startemulator)
-    - [7d. `connectWifi`](#7d-connectwifi)
-    - [7e. `showDeviceScreen`](#7e-showdevicescreen)
-    - [7f. `listDevices` / `stopDaemon`](#7f-listdevices--stopdaemon)
-  - [8. Dependency Injection Pattern](#8-dependency-injection-pattern)
-  - [9. VS Code Contribution Points](#9-vs-code-contribution-points)
-    - [Activation Events](#activation-events)
-    - [Commands](#commands)
-    - [Editor Title Bar Button](#editor-title-bar-button)
-    - [Configuration](#configuration)
-
----
-
 ## 1. Module Map
 
-```
+```bash
 packages/extension/src/
 ├── extension.ts          Entry point activated by VS Code
 ├── sdk.ts                Android SDK path resolution
@@ -171,7 +134,7 @@ export interface BuildProgressEvent {
 
 `DaemonClient` maintains a single `WebSocket` instance. The connection lifecycle is:
 
-```
+```bash
 ensureRunning()
     ├─ ws.readyState === OPEN  → nothing to do
     ├─ connect()  succeeds     → open
@@ -186,7 +149,7 @@ ensureRunning()
 
 All incoming WebSocket frames are handled by `handleMessage(raw)`:
 
-```
+```bash
 handleMessage(raw)
     │
     ├─ parse JSON
@@ -392,7 +355,7 @@ The panel's `onDidReceiveMessage` handler in the extension process forwards tap 
 
 **Content Security Policy**:
 
-```
+```bash
 default-src 'none';
 script-src 'unsafe-inline';
 style-src 'unsafe-inline';

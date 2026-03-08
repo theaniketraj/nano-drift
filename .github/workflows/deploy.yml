@@ -27,13 +27,16 @@ jobs:
         uses: actions/checkout@v4
 
       # Assemble the site:
-      #   landing/* → _site/          (HTML, CSS, JS, favicon)
-      #   docs/*    → _site/docs/     (Markdown files fetched at runtime)
+      #   landing/* → _site/          (HTML, CSS, JS, SW, manifest, favicon …)
+      #   docs/*    → _site/docs/     (Markdown files fetched at runtime by JS)
+      #   .nojekyll → _site/          (prevents Jekyll processing on GH Pages)
       - name: Assemble site
         run: |
           mkdir -p _site
           cp -r landing/. _site/
           cp -r docs _site/docs
+          # Ensure jekyll is disabled at the GH Pages root
+          touch _site/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

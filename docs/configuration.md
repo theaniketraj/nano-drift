@@ -24,7 +24,7 @@ Path to the Android SDK root directory. When empty, Nano Drift reads `ANDROID_HO
 
 `adb` and `emulator` binaries are resolved as:
 
-```
+```xml
 <androidHome>/platform-tools/adb[.exe]
 <androidHome>/emulator/emulator[.exe]
 ```

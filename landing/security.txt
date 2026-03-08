@@ -1,0 +1,4 @@
+Contact: https://github.com/theaniketraj/nano-drift/issues
+Preferred-Languages: en
+Canonical: https://theaniketraj.github.io/nano-drift/security.txt
+Expires: 2027-03-08T00:00:00.000Z

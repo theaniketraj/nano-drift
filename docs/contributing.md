@@ -4,24 +4,9 @@ This document covers everything needed to build, run, debug, and extend Nano Dri
 
 ---
 
-## Contents
-
-1. [Repository Layout](#1-repository-layout)
-2. [Prerequisites](#2-prerequisites)
-3. [Initial Setup](#3-initial-setup)
-4. [Building](#4-building)
-5. [Running in the Extension Development Host](#5-running-in-the-extension-development-host)
-6. [Debugging](#6-debugging)
-7. [Codebase Conventions](#7-codebase-conventions)
-8. [Adding a New RPC Method](#8-adding-a-new-rpc-method)
-9. [Adding a New VS Code Command](#9-adding-a-new-vs-code-command)
-10. [Release Process](#10-release-process)
-
----
-
 ## 1. Repository Layout
 
-```
+```bash
 nano-drift/                          ← npm workspaces monorepo root
 ├── package.json                     ← root scripts: compile, watch, lint, clean
 ├── packages/
@@ -309,7 +294,7 @@ Both `packages/extension/package.json` and `packages/daemon/package.json` should
 
 ### Pre-release Checklist
 
-```
+```bash
 [ ] Both packages compile with zero TypeScript errors
 [ ] npm run lint passes with zero errors
 [ ] Manual smoke test: open an Android project, trigger a build, confirm deploy

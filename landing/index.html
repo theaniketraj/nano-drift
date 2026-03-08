@@ -38,9 +38,10 @@
     <meta name="twitter:image" content="https://theaniketraj.github.io/nano-drift/og-image.png" />
     <meta name="twitter:image:alt" content="Nano Drift — VS Code Android extension" />
 
-    <!-- Favicon & theme color -->
+    <!-- Favicon, manifest & theme color -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#ff6b35" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#cc4a12" media="(prefers-color-scheme: light)" />
 
@@ -80,8 +81,7 @@
 
     <link id="hljs-theme" rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 </head>
 
 <body>
@@ -92,7 +92,7 @@
                 <span>Nano Drift</span>
             </a>
 
-            <nav class="nav-links">
+            <nav class="nav-links" aria-label="nav-links">
                 <a class="nav-link" href="#features" id="nav-features-link">Features</a>
                 <button class="nav-link" id="nav-docs-btn" data-nav="docs">
                     Docs
@@ -396,7 +396,7 @@
         <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
         <div class="docs-layout">
             <!-- Sidebar -->
-            <aside id="docs-sidebar">
+            <aside id="docs-sidebar" aria-label="docs-sidebar">
                 <div class="sb-group">
                     <div class="sb-label">Overview</div>
                     <a class="sb-link" data-doc="index" href="#">Overview</a>
@@ -429,7 +429,7 @@
                 </div>
             </main>
 
-            <aside id="docs-toc">
+            <aside id="docs-toc" aria-label="docs-toc">
                 <div class="toc-label">On this page</div>
                 <ul class="toc-list" id="toc-list"></ul>
             </aside>
@@ -498,6 +498,13 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
     <script src="script.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
+        });
+      }
+    </script>
 </body>
 
 </html>

@@ -4,32 +4,6 @@ This document describes the overall system design of Nano Drift, the rationale b
 
 ---
 
-## Contents
-
-- [Architecture](#architecture)
-  - [Contents](#contents)
-  - [1. Design Philosophy](#1-design-philosophy)
-  - [2. High-Level Component Map](#2-high-level-component-map)
-  - [3. Process Boundary](#3-process-boundary)
-  - [4. Extension Architecture](#4-extension-architecture)
-    - [Activation Flow](#activation-flow)
-    - [Status Bar States](#status-bar-states)
-    - [Event-Driven Diagnostics](#event-driven-diagnostics)
-  - [5. Daemon Architecture](#5-daemon-architecture)
-    - [RPC Handler Registry](#rpc-handler-registry)
-  - [6. Communication Layer](#6-communication-layer)
-    - [RPC Channel (`/rpc`)](#rpc-channel-rpc)
-    - [Screen Channel (`/screen`)](#screen-channel-screen)
-  - [7. The Drift Loop — End-to-End Data Flow](#7-the-drift-loop--end-to-end-data-flow)
-  - [8. Screen Streaming Data Flow](#8-screen-streaming-data-flow)
-  - [9. Lifecycle and State Management](#9-lifecycle-and-state-management)
-    - [Daemon Startup](#daemon-startup)
-    - [Daemon Shutdown](#daemon-shutdown)
-    - [Extension Deactivation](#extension-deactivation)
-  - [10. Security Boundaries](#10-security-boundaries)
-
----
-
 ## 1. Design Philosophy
 
 **Separation of concerns across the process boundary.** The extension and daemon are intentionally decoupled so each can evolve — or be replaced — independently:
@@ -47,7 +21,7 @@ This means:
 
 ## 2. High-Level Component Map
 
-```
+```bash
 ┌──────────────────────────────────────────────────────────────────────┐
 │  VS Code (Renderer Process)                                          │
 │                                                                      │
@@ -119,7 +93,7 @@ The daemon process binds **only to `127.0.0.1`**, never to `0.0.0.0`, which mean
 
 ## 4. Extension Architecture
 
-```
+```bash
 packages/extension/src/
 ├── extension.ts          Activation entry point — wires everything together
 ├── sdk.ts                Resolves ANDROID_HOME from settings or environment
@@ -138,7 +112,7 @@ packages/extension/src/
 
 ### Activation Flow
 
-```
+```bash
 activate(context)
     │
     ├─ detectAndroidSdk()         — warns if ANDROID_HOME missing
@@ -169,7 +143,7 @@ The extension maintains two persistent status bar items:
 
 The Action item cycles through states driven by `build.progress` push events:
 
-```
+```bash
 idle → building… → deploying… → running
                       ↑
                     error  (red background)
@@ -188,7 +162,7 @@ idle → building… → deploying… → running
 
 ## 5. Daemon Architecture
 
-```
+```bash
 packages/daemon/src/
 ├── index.ts          CLI entry (commander) — parses --port, starts DaemonServer
 ├── server.ts         WebSocket server, RPC dispatch, push broadcast, build cycle
@@ -270,7 +244,7 @@ Frame delivery is fire-and-forget: if a client's buffer is full, the frame is si
 
 This sequence describes what happens from the moment a file is saved to the moment the app relaunches on-device.
 
-```
+```bash
 Developer saves app/src/main/java/…/MyActivity.kt
         │
         ▼
@@ -338,7 +312,7 @@ The extension then sets the status bar to the error state and populates the Prob
 
 ## 8. Screen Streaming Data Flow
 
-```
+```bash
 ScreenStreamer.startCapture()   ← triggered when first /screen client connects
         │
         ├─ setInterval(captureFrame, 100ms)   ← ~10 fps baseline
@@ -374,7 +348,7 @@ The `capturing` boolean flag prevents frame overlap: if the previous `screencap`
 
 ### Daemon Startup
 
-```
+```bash
 node out/index.js [--port 27183]
     │
     ├─ DaemonServer constructor
@@ -390,7 +364,7 @@ node out/index.js [--port 27183]
 
 ### Daemon Shutdown
 
-```
+```bash
 SIGINT / SIGTERM
     │
     ├─ FileWatcher.stop()   ← closes chokidar watcher
@@ -401,7 +375,7 @@ SIGINT / SIGTERM
 
 ### Extension Deactivation
 
-```
+```bash
 deactivate()
     │
     ├─ daemonClient.dispose()

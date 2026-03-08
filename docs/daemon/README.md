@@ -4,23 +4,9 @@ This document covers the Node.js daemon package (`packages/daemon`) in detail: t
 
 ---
 
-## Contents
-
-1. [Module Map](#1-module-map)
-2. [Entry Point — `index.ts`](#2-entry-point--indexts)
-3. [DaemonServer — `server.ts`](#3-daemonserver--serverts)
-4. [GradleRunner — `gradle/index.ts`](#4-gradlerunner--gradleindexts)
-5. [AdbManager — `adb/index.ts`](#5-adbmanager--adbindexts)
-6. [FileWatcher — `watcher/index.ts`](#6-filewatcher--watcherindexts)
-7. [ScreenStreamer — `screen/index.ts`](#7-screenstreamer--screenindexts)
-8. [Error Propagation Model](#8-error-propagation-model)
-9. [Standalone Usage](#9-standalone-usage)
-
----
-
 ## 1. Module Map
 
-```
+```bash
 packages/daemon/src/
 ├── index.ts          CLI entry point (commander)
 ├── server.ts         WebSocket server, RPC dispatch, build cycle, push broadcast
@@ -42,7 +28,7 @@ packages/daemon/src/
 
 The daemon entry point uses [Commander](https://github.com/tj/commander.js) for CLI argument parsing. It accepts a single optional flag:
 
-```
+```bash
 nano-drift-daemon [--port <number>]
 ```
 
@@ -140,7 +126,7 @@ private async runBuildCycle(opts: WatcherOptions): Promise<void>
 
 Guards against concurrent invocations with the `buildInProgress` boolean flag. The flow:
 
-```
+```bash
 buildInProgress = true
 push('build.progress', { stage: 'building' })
     │
@@ -211,7 +197,7 @@ Parses a single line of Gradle output against three regex patterns:
 
 #### Kotlin (new format)
 
-```
+```bash
 e: file:///abs/path.kt:10:5: error message
 w: file:///abs/path.kt:10:5: warning message
 e: /abs/path.kt:10:5: error message
@@ -221,7 +207,7 @@ Pattern: `/^([ew]):\s+(?:file:\/\/\/)?(.+?):(\d+):(\d+):\s+(.+)$/`
 
 #### Kotlin (old format)
 
-```
+```bash
 e: /abs/path.kt: (10, 5): error message
 ```
 
@@ -229,7 +215,7 @@ Pattern: `/^([ew]):\s+(.+?):\s+\((\d+),\s*(\d+)\):\s+(.+)$/`
 
 #### Java
 
-```
+```bash
 /abs/path/File.java:10: error: error message
 /abs/path/File.java:10: warning: warning message
 ```
@@ -267,7 +253,7 @@ Falls back to bare `'adb'` / `'emulator'` if SDK environment variables are not s
 
 Runs `adb devices -l` and parses output:
 
-```
+```bash
 List of devices attached
 emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_arm64 ...
 192.168.1.42:5555      device product:sunflower model:Pixel_4 ...

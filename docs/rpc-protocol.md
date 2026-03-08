@@ -4,54 +4,6 @@ This document is the authoritative specification for the communication protocol 
 
 ---
 
-## Contents
-
-- [RPC Protocol Reference](#rpc-protocol-reference)
-  - [Contents](#contents)
-  - [1. Transport](#1-transport)
-  - [2. Message Framing](#2-message-framing)
-    - [Distinguishing frame types](#distinguishing-frame-types)
-  - [3. Request / Response Pattern](#3-request--response-pattern)
-    - [Request](#request)
-    - [Successful Response](#successful-response)
-    - [Error Response](#error-response)
-  - [4. Push Notification Pattern](#4-push-notification-pattern)
-  - [5. Method Reference — Device Management](#5-method-reference--device-management)
-    - [`devices.list`](#deviceslist)
-    - [`devices.setActive`](#devicessetactive)
-  - [6. Method Reference — Emulator](#6-method-reference--emulator)
-    - [`emulator.listAvds`](#emulatorlistavds)
-    - [`emulator.start`](#emulatorstart)
-  - [7. Method Reference — ADB](#7-method-reference--adb)
-    - [`adb.connectWifi`](#adbconnectwifi)
-    - [`adb.launch`](#adblaunch)
-    - [`adb.tap`](#adbtap)
-    - [`adb.swipe`](#adbswipe)
-    - [`adb.detectPackage`](#adbdetectpackage)
-  - [8. Method Reference — Gradle](#8-method-reference--gradle)
-    - [`gradle.build`](#gradlebuild)
-  - [9. Method Reference — File Watcher](#9-method-reference--file-watcher)
-    - [`watcher.start`](#watcherstart)
-    - [`watcher.stop`](#watcherstop)
-  - [10. Push Event Reference](#10-push-event-reference)
-    - [`build.progress`](#buildprogress)
-      - [Stage lifecycle](#stage-lifecycle)
-      - [`building`](#building)
-      - [`output`](#output)
-      - [`deploying`](#deploying)
-      - [`done`](#done)
-      - [`error`](#error)
-  - [11. Error Handling](#11-error-handling)
-    - [Extension-side](#extension-side)
-    - [Daemon-side](#daemon-side)
-    - [Timeout behaviour](#timeout-behaviour)
-  - [12. Screen Channel](#12-screen-channel)
-    - [Connecting](#connecting)
-    - [Receiving frames](#receiving-frames)
-    - [No control channel on `/screen`](#no-control-channel-on-screen)
-
----
-
 ## 1. Transport
 
 | Property       | Value                                                    |
