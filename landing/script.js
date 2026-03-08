@@ -84,15 +84,20 @@ setTimeout(runTermAnim, 900);
 
 /* ── Routing ─────────────────────────────────────────────────── */
 function goLanding() {
-  document.body.classList.remove("docs");
+  document.body.classList.remove("docs", "mobile-nav-open", "docs-sidebar-open");
   document.getElementById("nav-docs-btn").classList.remove("active");
+  document.getElementById("mobile-nav-panel")?.setAttribute("aria-hidden", "true");
+  document.getElementById("nav-hamburger")?.setAttribute("aria-expanded", "false");
   history.pushState(null, "", location.pathname);
   window.scrollTo(0, 0);
 }
 
 function goDocs(docId) {
   document.body.classList.add("docs");
+  document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
   document.getElementById("nav-docs-btn").classList.add("active");
+  document.getElementById("mobile-nav-panel")?.setAttribute("aria-hidden", "true");
+  document.getElementById("nav-hamburger")?.setAttribute("aria-expanded", "false");
   history.pushState(null, "", "#docs/" + docId);
   loadDoc(docId);
   window.scrollTo(0, 0);
@@ -158,15 +163,21 @@ document.querySelectorAll("[data-goto-doc]").forEach((el) => {
 });
 
 /* ── Doc map ─────────────────────────────────────────────────── */
+// When served locally from project root (landing/ is a subfolder) use ../docs/
+// When deployed to GitHub Pages (landing/ is the site root) use docs/
+const DOCS_BASE = window.location.pathname.includes("/landing/")
+  ? "../docs/"
+  : "docs/";
+
 const DOC_MAP = {
-  index: "../docs/index.md",
-  "getting-started": "../docs/getting-started.md",
-  configuration: "../docs/configuration.md",
-  architecture: "../docs/architecture.md",
-  "rpc-protocol": "../docs/rpc-protocol.md",
-  extension: "../docs/extension/README.md",
-  daemon: "../docs/daemon/README.md",
-  contributing: "../docs/contributing.md",
+  index: DOCS_BASE + "index.md",
+  "getting-started": DOCS_BASE + "getting-started.md",
+  configuration: DOCS_BASE + "configuration.md",
+  architecture: DOCS_BASE + "architecture.md",
+  "rpc-protocol": DOCS_BASE + "rpc-protocol.md",
+  extension: DOCS_BASE + "extension/README.md",
+  daemon: DOCS_BASE + "daemon/README.md",
+  contributing: DOCS_BASE + "contributing.md",
 };
 
 // Map bare filenames → doc IDs (for link interception)
@@ -334,3 +345,74 @@ document.querySelectorAll(".sb-link").forEach((el) => {
     loadDoc(id || "index");
   }
 })();
+/* ── Mobile navigation ────────────────────────────────────────────── */
+const $hamburger = document.getElementById("nav-hamburger");
+const $mobileNavBackdrop = document.getElementById("mobile-nav-backdrop");
+const $mobileNavPanel = document.getElementById("mobile-nav-panel");
+
+function openMobileNav() {
+  document.body.classList.add("mobile-nav-open");
+  $mobileNavPanel.setAttribute("aria-hidden", "false");
+  $hamburger.setAttribute("aria-expanded", "true");
+}
+
+function closeMobileNav() {
+  document.body.classList.remove("mobile-nav-open");
+  $mobileNavPanel.setAttribute("aria-hidden", "true");
+  $hamburger.setAttribute("aria-expanded", "false");
+}
+
+$hamburger.addEventListener("click", () => {
+  document.body.classList.contains("mobile-nav-open")
+    ? closeMobileNav()
+    : openMobileNav();
+});
+
+$mobileNavBackdrop.addEventListener("click", closeMobileNav);
+
+document.getElementById("mobile-logo-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  closeMobileNav();
+  goLanding();
+});
+
+document.getElementById("mobile-feat-link").addEventListener("click", (e) => {
+  closeMobileNav();
+  if (document.body.classList.contains("docs")) {
+    e.preventDefault();
+    goLanding();
+    setTimeout(
+      () =>
+        document
+          .getElementById("features")
+          ?.scrollIntoView({ behavior: "smooth" }),
+      60,
+    );
+  }
+});
+
+document.getElementById("mobile-docs-btn").addEventListener("click", () => {
+  closeMobileNav();
+  goDocs("index");
+});
+
+/* ── Mobile docs sidebar ──────────────────────────────────────────── */
+const $sidebarToggle = document.getElementById("docs-sidebar-toggle");
+const $sidebarBackdrop = document.getElementById("sidebar-backdrop");
+
+$sidebarToggle.addEventListener("click", () => {
+  document.body.classList.add("docs-sidebar-open");
+});
+
+$sidebarBackdrop.addEventListener("click", () => {
+  document.body.classList.remove("docs-sidebar-open");
+});
+
+// Close panels on resize to desktop
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 900) {
+    document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
+    $mobileNavPanel.setAttribute("aria-hidden", "true");
+    $hamburger.setAttribute("aria-expanded", "false");
+  }
+}, { passive: true });
