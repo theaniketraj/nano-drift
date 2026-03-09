@@ -440,3 +440,7 @@ The run button only appears when `nanoDrift.active` is `true` — i.e., after su
 ### Configuration
 
 See the [Configuration Reference](../configuration.md) for the full specification of all `nanoDrift.*` settings.
+
+---
+
+[← Architecture](../architecture.md) &nbsp;&nbsp;|&nbsp;&nbsp; [Daemon Internals →](../daemon/README.md)

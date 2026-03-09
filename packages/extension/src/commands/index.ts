@@ -4,7 +4,7 @@ import { DaemonClient } from '../daemon/client';
 import { DiagnosticsManager } from '../diagnostics';
 import { runOnTheFly } from './runOnTheFly';
 import { selectDevice } from './selectDevice';
-import { showDeviceScreen } from './showDeviceScreen';
+import { DeviceScreenViewProvider } from './showDeviceScreen';
 import { startEmulator } from './startEmulator';
 import { connectWifi } from './connectWifi';
 
@@ -20,6 +20,15 @@ export function registerCommands(
     context: vscode.ExtensionContext,
     deps: CommandDeps
 ): void {
+    const screenProvider = new DeviceScreenViewProvider(context, deps);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            DeviceScreenViewProvider.viewType,
+            screenProvider,
+            { webviewOptions: { retainContextWhenHidden: true } }
+        )
+    );
+
     context.subscriptions.push(
         vscode.commands.registerCommand('nanoDrift.runOnTheFly', () =>
             runOnTheFly(deps)
@@ -28,7 +37,7 @@ export function registerCommands(
             selectDevice(deps)
         ),
         vscode.commands.registerCommand('nanoDrift.showDeviceScreen', () =>
-            showDeviceScreen(context, deps)
+            void vscode.commands.executeCommand('nanoDrift.deviceScreenView.focus')
         ),
         vscode.commands.registerCommand('nanoDrift.startEmulator', () =>
             startEmulator(deps)

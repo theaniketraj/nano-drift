@@ -402,3 +402,7 @@ All three managers are also registered as `context.subscriptions`, so VS Code's 
 | ADB subprocess          | `execFile` is used throughout (never `exec` or shell string interpolation) — eliminates shell injection vectors         |
 | Gradle subprocess       | `spawn` with explicit args array; `shell: true` only on Windows where it is required by `.bat` invocation               |
 | Input forwarding        | Tap/swipe coordinates are integers validated by TypeScript types; no freeform shell arguments are constructed from them |
+
+---
+
+[← Getting Started](./getting-started.md) &nbsp;&nbsp;|&nbsp;&nbsp; [Extension Internals →](./extension/README.md)

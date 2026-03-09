@@ -333,3 +333,7 @@ If your project layout differs, set the package name explicitly:
   "nanoDrift.packageName": "com.example.myapp",
 }
 ```
+
+---
+
+[← Home](./index.md) &nbsp;&nbsp;|&nbsp;&nbsp; [Architecture →](./architecture.md)

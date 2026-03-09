@@ -592,3 +592,7 @@ The Webview in `showDeviceScreen.ts` uses exactly this pattern. It also auto-res
 ### No control channel on `/screen`
 
 The screen WebSocket is receive-only. Input events (tap, swipe) are sent via the RPC channel using `adb.tap` and `adb.swipe` methods, not through the screen WebSocket.
+
+---
+
+[← Daemon Internals](./daemon/README.md) &nbsp;&nbsp;|&nbsp;&nbsp; [Configuration →](./configuration.md)

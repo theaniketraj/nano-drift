@@ -330,3 +330,7 @@ npm publish --access public
 ```
 
 This allows advanced users to install the daemon globally (`npm install -g @nano-drift/daemon`) and run it independently of VS Code.
+
+---
+
+[← Configuration](./configuration.md)

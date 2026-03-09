@@ -15,12 +15,31 @@
   "icon": "images/icon.png",
   "galleryBanner": { "color": "#0D0D0D", "theme": "dark" },
   "activationEvents": [
+    "*",
     "workspaceContains:**/AndroidManifest.xml",
     "workspaceContains:**/build.gradle",
     "workspaceContains:**/build.gradle.kts"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nano-drift",
+          "title": "Nano Drift",
+          "icon": "images/nano-drift.svg"
+        }
+      ]
+    },
+    "views": {
+      "nano-drift": [
+        {
+          "type": "webview",
+          "id": "nanoDrift.deviceScreenView",
+          "name": "Device Screen"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "nanoDrift.runOnTheFly",
@@ -48,7 +67,7 @@
       },
       {
         "command": "nanoDrift.showDeviceScreen",
-        "title": "Show Device Screen",
+        "title": "Focus Device Screen",
         "category": "Android",
         "icon": "$(screen-normal)"
       },

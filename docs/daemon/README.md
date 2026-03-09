@@ -472,3 +472,7 @@ wscat -c ws://127.0.0.1:27183/rpc
 < {"id":"3","result":null}
 # Subsequent file saves push build.progress events automatically
 ```
+
+---
+
+[← Extension Internals](../extension/README.md) &nbsp;&nbsp;|&nbsp;&nbsp; [RPC Protocol →](../rpc-protocol.md)

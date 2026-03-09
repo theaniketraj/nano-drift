@@ -203,3 +203,7 @@ VS Code applies settings in the following order (later overrides earlier):
 5. Folder settings (multi-root workspaces)
 
 For `nanoDrift.daemonPort` and `nanoDrift.androidHome`, which are machine-specific, prefer **user settings**. For `nanoDrift.gradleArgs` and `nanoDrift.packageName`, which are project-specific, prefer **workspace settings** and commit them to version control.
+
+---
+
+[← RPC Protocol](./rpc-protocol.md) &nbsp;&nbsp;|&nbsp;&nbsp; [Contributing →](./contributing.md)

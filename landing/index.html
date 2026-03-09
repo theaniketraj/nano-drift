@@ -88,8 +88,7 @@
     <header id="navbar">
         <div class="container nav-inner">
             <a class="nav-logo" href="#" id="nav-logo-link">
-                <div class="logo-mark">N</div>
-                <span>Nano Drift</span>
+                <img src="drift.svg" alt="Nano Drift" class="logo-svg">
             </a>
 
             <nav class="nav-links" aria-label="nav-links">
@@ -166,12 +165,29 @@
                         </h1>
                         <p class="hero-sub">
                             Nano Drift collapses the
-                            build&nbsp;→&nbsp;deploy&nbsp;→&nbsp;observe loop from minutes
+                            build&nbsp;<span class="btn-arr" aria-hidden="true"><svg width="14" height="14"
+                                    viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 8h10" />
+                                    <path d="M9 4l4 4-4 4" />
+                                </svg></span>&nbsp;deploy&nbsp;<span class="btn-arr" aria-hidden="true"><svg width="14"
+                                    height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 8h10" />
+                                    <path d="M9 4l4 4-4 4" />
+                                </svg></span>&nbsp;observe loop from
+                            minutes
                             to seconds. Save a source file; your device refreshes. No
                             terminals. No manual installs. No context switching.
                         </p>
                         <div class="hero-actions">
-                            <a class="btn-primary" href="#" id="hero-start-btn">Get Started →</a>
+                            <a class="btn-primary" href="#" id="hero-start-btn">Get Started <span class="btn-arr"
+                                    aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M3 8h10" />
+                                        <path d="M9 4l4 4-4 4" />
+                                    </svg></span></a>
                             <a class="btn-secondary" href="#" id="hero-docs-btn">Read the Docs</a>
                         </div>
                     </div>
@@ -298,7 +314,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </section><br>
 
         <!-- Features ─────────────────────────────────────────────── -->
         <section class="section" id="features" style="padding-top: 0">
@@ -367,6 +383,92 @@
             </div>
         </section>
 
+        <!-- FAQ ──────────────────────────────────────────────────── -->
+        <section class="section faq-section" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-label">FAQ</div>
+                    <h2 class="section-title">Common questions, answered.</h2>
+                    <p class="section-sub">
+                        Everything you were about to open a GitHub issue for.
+                    </p>
+                </div>
+                <div class="faq-list">
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            <span>Why a separate daemon process?</span>
+                            <span class="faq-chevron" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 6l4 4 4-4" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="faq-a">
+                            <p>VS Code extensions run in the Extension Host (a Node.js process), which must stay
+                                responsive. Long-running Gradle builds would block it. The daemon runs independently,
+                                handles blocking I/O, streams progress back over WebSocket, and survives extension
+                                reloads.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            <span>Why JPEG snapshots before H.264?</span>
+                            <span class="faq-chevron" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 6l4 4 4-4" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="faq-a">
+                            <p>Zero dependencies on external binaries (<code>scrcpy</code>). Every Android device
+                                supports <code>adb screencap</code>. Snapshots work immediately; H.264 streaming is a
+                                drop-in upgrade in Phase 5 without any API changes to the extension&nbsp;↔&nbsp;daemon
+                                protocol.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            <span>Why WebSocket RPC (not stdio)?</span>
+                            <span class="faq-chevron" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 6l4 4 4-4" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="faq-a">
+                            <p>Easier to debug (messages are plain JSON), supports push notifications from daemon to
+                                extension (build progress, device connect/disconnect), and the same server doubles as
+                                the Webview's screen endpoint on <code>/screen</code>.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            <span>Why npm workspaces (not a single package)?</span>
+                            <span class="faq-chevron" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 6l4 4 4-4" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="faq-a">
+                            <p>The daemon must be packaged separately (it's a long-running Node.js server). The
+                                extension only ships the compiled daemon as a binary artifact. Keeping them in separate
+                                packages enforces this boundary and avoids circular deps.</p>
+                        </div>
+                    </details>
+
+                </div>
+            </div>
+        </section>
+
         <!-- CTA ──────────────────────────────────────────────────── -->
         <section class="cta-section">
             <div class="container">
@@ -377,7 +479,13 @@
                         That's the entire setup.
                     </p>
                     <div class="cta-actions">
-                        <a class="btn-primary" href="#" id="cta-start-btn">Get Started →</a>
+                        <a class="btn-primary" href="#" id="cta-start-btn">Get Started <span class="btn-arr"
+                                aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+                                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M3 8h10" />
+                                    <path d="M9 4l4 4-4 4" />
+                                </svg></span></a>
                         <a class="btn-secondary" href="https://github.com/theaniketraj/nano-drift" target="_blank"
                             rel="noopener">View on GitHub</a>
                     </div>
@@ -441,8 +549,7 @@
             <div class="footer-grid">
                 <div class="footer-brand">
                     <a class="nav-logo" href="#" id="footer-logo-link">
-                        <div class="logo-mark">N</div>
-                        Nano Drift
+                        <img src="drift.svg" alt="Nano Drift" class="logo-svg">
                     </a>
                     <p>
                         Android development at your own pace — build, deploy, and mirror
@@ -497,13 +604,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+    <script src="docs-bundle.js"></script>
     <script src="script.js"></script>
     <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
-        });
-      }
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => { });
+            });
+        }
     </script>
 </body>
 

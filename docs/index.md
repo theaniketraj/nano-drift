@@ -66,3 +66,7 @@ This separation means the daemon can be started standalone, scripted from CI, or
 | Screen transport | WebSocket binary (PNG frames) on `127.0.0.1:27183/screen`         |
 | Repo layout      | npm workspaces monorepo (`packages/extension`, `packages/daemon`) |
 | License          | MIT                                                               |
+
+---
+
+[Getting Started →](./getting-started.md)

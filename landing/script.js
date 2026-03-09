@@ -90,6 +90,11 @@ function goLanding() {
     "docs-sidebar-open",
   );
   document.getElementById("nav-docs-btn").classList.remove("active");
+  document.getElementById("docs-page").classList.remove("active");
+  document.getElementById("landing").classList.remove("hidden");
+  document.getElementById("mobile-nav-panel")?.classList.remove("open");
+  document.getElementById("mobile-nav-backdrop")?.classList.remove("open");
+  document.getElementById("docs-sidebar")?.classList.remove("open");
   document
     .getElementById("mobile-nav-panel")
     ?.setAttribute("aria-hidden", "true");
@@ -104,6 +109,11 @@ function goDocs(docId) {
   document.body.classList.add("docs");
   document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
   document.getElementById("nav-docs-btn").classList.add("active");
+  document.getElementById("docs-page").classList.add("active");
+  document.getElementById("landing").classList.add("hidden");
+  document.getElementById("mobile-nav-panel")?.classList.remove("open");
+  document.getElementById("mobile-nav-backdrop")?.classList.remove("open");
+  document.getElementById("docs-sidebar")?.classList.remove("open");
   document
     .getElementById("mobile-nav-panel")
     ?.setAttribute("aria-hidden", "true");
@@ -121,10 +131,14 @@ globalThis.addEventListener("popstate", () => {
     const id = h.startsWith("#docs/") ? h.slice(6) : "index";
     document.body.classList.add("docs");
     document.getElementById("nav-docs-btn").classList.add("active");
+    document.getElementById("docs-page").classList.add("active");
+    document.getElementById("landing").classList.add("hidden");
     loadDoc(id || "index");
   } else {
     document.body.classList.remove("docs");
     document.getElementById("nav-docs-btn").classList.remove("active");
+    document.getElementById("docs-page").classList.remove("active");
+    document.getElementById("landing").classList.remove("hidden");
   }
 });
 
@@ -223,9 +237,14 @@ async function loadDoc(docId) {
     </svg><p>Loading…</p></div>`;
 
   try {
-    const res = await fetch(path);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const md = await res.text();
+    let md;
+    if (location.protocol === "file:" && globalThis.DOCS_BUNDLE?.[docId]) {
+      md = globalThis.DOCS_BUNDLE[docId];
+    } else {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      md = await res.text();
+    }
     $body.innerHTML = marked.parse(md);
 
     // Intercept internal .md links
@@ -233,11 +252,16 @@ async function loadDoc(docId) {
       const href = a.getAttribute("href");
       if (!href || href.startsWith("http") || href.startsWith("#")) return;
       if (href.endsWith(".md") || href.includes(".md#")) {
-        const base = href.split("/").pop().split("#")[0];
+        // Normalize by stripping any leading ./ or ../ sequences, keeping
+        // the rest of the path intact (e.g. "daemon/README.md" stays whole).
+        const normalized = href.replace(/^(?:\.\.\/|\.\/)+/, "").split("#")[0];
         const id =
-          FILENAME_TO_ID[base] ||
-          Object.keys(DOC_MAP).find((k) => DOC_MAP[k].endsWith("/" + base)) ||
-          base.replace(".md", "");
+          Object.keys(DOC_MAP).find((k) =>
+            DOC_MAP[k].endsWith("/" + normalized),
+          ) ||
+          normalized
+            .replace(/\/README\.md$/, "")
+            .replace(/\.md$/, "");
         a.setAttribute("href", "#");
         a.addEventListener("click", (e) => {
           e.preventDefault();
@@ -252,24 +276,49 @@ async function loadDoc(docId) {
       a.setAttribute("rel", "noopener");
     });
 
+    // Convert bottom ---  + prev/next paragraph into styled nav buttons
+    const allHrs = Array.from($body.querySelectorAll("hr"));
+    const lastHr = allHrs[allHrs.length - 1];
+    if (lastHr) {
+      const para = lastHr.nextElementSibling;
+      if (para && para.tagName === "P") {
+        const navAnchors = Array.from(para.querySelectorAll("a")).filter(
+          (a) => a.textContent.includes("\u2190") || a.textContent.includes("\u2192"),
+        );
+        if (navAnchors.length > 0) {
+          const nav = document.createElement("nav");
+          nav.className = "docs-page-nav";
+          navAnchors.forEach((a) => {
+            const isPrev = a.textContent.includes("\u2190");
+            const rawTitle = a.textContent.replace(/[\u2190\u2192]/g, "").trim();
+            const btn = document.createElement("a");
+            btn.href = "#";
+            btn.className = "docs-nav-btn " + (isPrev ? "docs-nav-prev" : "docs-nav-next");
+            btn.innerHTML = isPrev
+              ? `<span class="nav-arrow">\u2190</span><span class="nav-label"><span class="nav-hint">Previous</span><span class="nav-title">${rawTitle}</span></span>`
+              : `<span class="nav-label"><span class="nav-hint">Next</span><span class="nav-title">${rawTitle}</span></span><span class="nav-arrow">\u2192</span>`;
+            // Copy the click handler from the already-intercepted anchor
+            const original = a;
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              original.click();
+            });
+            nav.appendChild(btn);
+          });
+          lastHr.replaceWith(nav);
+          para.remove();
+        }
+      }
+    }
+
     // Build TOC
     buildTOC($body);
 
     document.getElementById("docs-content").scrollTo(0, 0);
   } catch (err) {
-    const isFile = location.protocol === "file:";
     $body.innerHTML = `<div class="docs-empty">
       <p style="color:var(--text2);font-size:.9375rem">Could not load this document.</p>
-      ${
-        isFile
-          ? `<p style="color:var(--text3);font-size:.85rem;margin-top:10px;line-height:1.6">
-        This page must be served over HTTP.<br>
-        From the project root, run:<br>
-        <code style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;margin-top:6px;display:inline-block;font-family:var(--mono)">npx serve .</code>
-        <br>then open <code style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-family:var(--mono)">http://localhost:3000/landing/</code>
-      </p>`
-          : `<p style="color:var(--text3);font-size:.85rem;margin-top:8px">${err.message}</p>`
-      }
+      <p style="color:var(--text3);font-size:.85rem;margin-top:8px">${err.message}</p>
     </div>`;
   }
 
@@ -354,6 +403,8 @@ document.querySelectorAll(".sb-link").forEach((el) => {
     const id = h.startsWith("#docs/") ? h.slice(6) : "index";
     document.body.classList.add("docs");
     document.getElementById("nav-docs-btn").classList.add("active");
+    document.getElementById("docs-page").classList.add("active");
+    document.getElementById("landing").classList.add("hidden");
     loadDoc(id || "index");
   }
 })();
@@ -364,12 +415,16 @@ const $mobileNavPanel = document.getElementById("mobile-nav-panel");
 
 function openMobileNav() {
   document.body.classList.add("mobile-nav-open");
+  $mobileNavPanel.classList.add("open");
+  $mobileNavBackdrop.classList.add("open");
   $mobileNavPanel.setAttribute("aria-hidden", "false");
   $hamburger.setAttribute("aria-expanded", "true");
 }
 
 function closeMobileNav() {
   document.body.classList.remove("mobile-nav-open");
+  $mobileNavPanel.classList.remove("open");
+  $mobileNavBackdrop.classList.remove("open");
   $mobileNavPanel.setAttribute("aria-hidden", "true");
   $hamburger.setAttribute("aria-expanded", "false");
 }
@@ -414,10 +469,12 @@ const $sidebarBackdrop = document.getElementById("sidebar-backdrop");
 
 $sidebarToggle.addEventListener("click", () => {
   document.body.classList.add("docs-sidebar-open");
+  document.getElementById("docs-sidebar").classList.add("open");
 });
 
 $sidebarBackdrop.addEventListener("click", () => {
   document.body.classList.remove("docs-sidebar-open");
+  document.getElementById("docs-sidebar").classList.remove("open");
 });
 
 // Close panels on resize to desktop
@@ -426,6 +483,9 @@ window.addEventListener(
   () => {
     if (window.innerWidth > 900) {
       document.body.classList.remove("mobile-nav-open", "docs-sidebar-open");
+      $mobileNavPanel.classList.remove("open");
+      $mobileNavBackdrop.classList.remove("open");
+      document.getElementById("docs-sidebar")?.classList.remove("open");
       $mobileNavPanel.setAttribute("aria-hidden", "true");
       $hamburger.setAttribute("aria-expanded", "false");
     }
