@@ -492,3 +492,37 @@ window.addEventListener(
   },
   { passive: true },
 );
+
+/* ── Typewriter for "pace." ────────────────────────────────────── */
+(function typePace() {
+  const el = document.getElementById("pace-type");
+  if (!el) return;
+
+  const WORD = "pace.";
+  // Delays: start after hero badge animation settles (~600 ms)
+  // Each keystroke: 95 ms ± 35 ms for a natural, unhurried feel
+  const START_DELAY = 620;
+  const BASE_DELAY  = 95;
+  const JITTER      = 35;
+
+  let i = 0;
+  // Cursor element
+  const cursor = document.createElement("span");
+  cursor.className = "pace-cursor";
+  cursor.textContent = "|";
+  el.appendChild(cursor);
+
+  function typeNext() {
+    if (i < WORD.length) {
+      cursor.insertAdjacentText("beforebegin", WORD[i++]);
+      const delay = BASE_DELAY + (Math.random() * JITTER * 2 - JITTER);
+      setTimeout(typeNext, delay);
+    } else {
+      // All letters typed — remove cursor, reveal underline
+      cursor.remove();
+      el.classList.add("typed");
+    }
+  }
+
+  setTimeout(typeNext, START_DELAY);
+})();

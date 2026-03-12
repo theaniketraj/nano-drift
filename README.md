@@ -2,46 +2,78 @@
 
 > **Chase the pain → Embrace the drift → At your own pace**
 
-Android development, fully inside VS Code. No Android Studio. No context-switching.
-
-## What it does
-
-- **On-the-fly builds** — save a Kotlin/Java file and the app auto-builds and deploys to your device via `./gradlew installDebug`.
-- **Headless emulator** — launch an AVD with no GUI window, controlled entirely from VS Code.
-- **Wi-Fi pairing** — connect physical devices over your local network.
-- **Live device screen** — your Android device screen streams into a VS Code Webview panel, with click-to-tap support.
-- **Status bar integration** — always see your active device and build state without leaving the editor.
-
-## Prerequisites
-
-- Android SDK with `ANDROID_HOME` / `ANDROID_SDK_ROOT` set
-- Node.js ≥ 18
-- An Android project with a `gradlew` wrapper
-
-## Getting Started
+Android development, fully inside VS Code.
+No Android Studio. No context-switching. Save → build → deploy — automatically.
 
 ```bash
-npm install
-npm run compile
+npm install && npm run compile
+# then F5 → Extension Development Host
 ```
 
-Then press **F5** in VS Code to launch the Extension Development Host.
+**Requires:** Android SDK (`ANDROID_HOME`), Node.js ≥ 18, a project with `gradlew`.
 
-## Architecture
+---
 
-See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for the full architecture, phase roadmap, and design decisions.
+## Features
+
+|                        |                                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Run on the Fly**     | Save any `.kt` / `.java` / `.xml` file → auto-incremental build + deploy via `./gradlew installDebug`    |
+| **Live Device Screen** | Android screen streamed into the VS Code sidebar — tap, swipe, and send keys without touching your phone |
+| **Headless Emulator**  | Boot an AVD with no GUI window, controlled entirely from the command palette                             |
+| **Wi-Fi Pairing**      | Connect Android 11+ devices wirelessly — supports ADB pairing codes                                      |
+| **Status Bar**         | Active device name and build state always visible, one click to switch devices                           |
+| **Diagnostics**        | Kotlin/Java compiler errors from Gradle surfaced directly in the Problems panel                          |
+
+---
+
+## How it works
+
+Two processes, one WebSocket:
+
+```bash
+Extension Host  
+    ── ws://127.0.0.1:27183 ──▶  Daemon (child process)
+                                            ├── ADB  (execFile, no shell)
+                                            ├── Gradle  (spawn ./gradlew)
+                                            └── ScreenStreamer  (~15 fps PNG)
+```
+
+→ [Full architecture & code walkthrough](PROJECT_STRUCTURE.md)
+
+---
 
 ## Commands
 
-| Command                              | Description                        |
-| ------------------------------------ | ---------------------------------- |
-| `Android: Run on the Fly`            | Build + deploy to active device    |
-| `Android: Select Active Device`      | Choose from connected devices      |
-| `Android: Start Headless Emulator`   | Boot an AVD without a GUI window   |
-| `Android: Connect Device over Wi-Fi` | Pair a physical device via IP      |
-| `Android: Show Device Screen`        | Open live screen mirror in Webview |
-| `Android: Stop Daemon`               | Shut down the background daemon    |
+| Command                   | ID                           |
+| ------------------------- | ---------------------------- |
+| Run on the Fly            | `nanoDrift.runOnTheFly`      |
+| Select Active Device      | `nanoDrift.selectDevice`     |
+| Start Headless Emulator   | `nanoDrift.startEmulator`    |
+| Connect Device over Wi-Fi | `nanoDrift.connectWifi`      |
+| Focus Device Screen       | `nanoDrift.showDeviceScreen` |
+| Stop Daemon               | `nanoDrift.stopDaemon`       |
+
+---
+
+## Docs
+
+- [Getting started](docs/getting-started.md)
+- [Configuration reference](docs/configuration.md)
+- [RPC protocol](docs/rpc-protocol.md)
+- [Architecture](docs/architecture.md)
+
+---
+
+## Contributing
+
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [CHANGELOG](CHANGELOG.md)
+
+---
 
 ## License
 
-MIT
+- [MIT](LICENSE)
+- [Privacy](PRIVACY.md)
+- [Security](SECURITY.md)

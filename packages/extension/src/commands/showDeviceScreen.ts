@@ -76,6 +76,12 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
                             void vscode.env.openExternal(vscode.Uri.parse(message.url, true));
                         }
                         break;
+                    case 'openSettings':
+                        void vscode.commands.executeCommand(
+                            'workbench.action.openSettings',
+                            'nanoDrift'
+                        );
+                        break;
                     case 'runOnTheFly':
                         void vscode.commands.executeCommand('nanoDrift.runOnTheFly');
                         break;
@@ -816,7 +822,7 @@ function buildWebviewHtml(daemonPort: number): string {
 
   // ── SETTINGS ─────────────────────────────────────────────────────────
   document.getElementById('btn-settings').addEventListener('click', function() {
-    vscode.postMessage({ type: 'openUrl', url: 'vscode://settings/nanoDrift' });
+    vscode.postMessage({ type: 'openSettings' });
   });
 
   // ── MESSAGES FROM EXTENSION ───────────────────────────────────────────
