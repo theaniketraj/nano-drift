@@ -229,10 +229,10 @@ export class DaemonServer {
         });
 
         this.reg('adb.swipe', (p) => {
-            const { serial, x1, y1, x2, y2 } = p as {
-                serial: string; x1: number; y1: number; x2: number; y2: number;
+            const { serial, x1, y1, x2, y2, durationMs } = p as {
+                serial: string; x1: number; y1: number; x2: number; y2: number; durationMs?: number;
             };
-            return this.adb.swipe(serial, x1, y1, x2, y2);
+            return this.adb.swipe(serial, x1, y1, x2, y2, durationMs);
         });
 
         this.reg('gradle.build', (p) => {
@@ -298,6 +298,23 @@ export class DaemonServer {
         this.reg('adb.detectPackage', (p) => {
             const { projectPath } = p as { projectPath: string };
             return this.adb.detectPackage(projectPath);
+        });
+
+        this.reg('adb.screenshot', (p) => {
+            const { serial } = p as { serial: string };
+            return this.adb.screenshot(serial).then((buf) => buf.toString('base64'));
+        });
+
+        this.reg('adb.rotate', (p) => {
+            const { serial } = p as { serial: string };
+            return this.adb.getRotation(serial).then((current) =>
+                this.adb.setRotation(serial, current === 0 ? 1 : 0)
+            );
+        });
+
+        this.reg('adb.forceStop', (p) => {
+            const { serial, packageName } = p as { serial: string; packageName: string };
+            return this.adb.forceStop(serial, packageName);
         });
     }
 

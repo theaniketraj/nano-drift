@@ -2,8 +2,9 @@
 
 > **Chase the pain → Embrace the drift → At your own pace**
 
-Android development, fully inside VS Code.
-No Android Studio. No context-switching. Save → build → deploy — automatically.
+Android development, fully inside VS Code.<br>
+No Android Studio. No context-switching.<br>
+Save → build → deploy — automatically.
 
 ```bash
 npm install && npm run compile
@@ -16,7 +17,7 @@ npm install && npm run compile
 
 ## Features
 
-|                        |                                                                                                          |
+| Feature                | Description                                                                                              |
 | ---------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Run on the Fly**     | Save any `.kt` / `.java` / `.xml` file → auto-incremental build + deploy via `./gradlew installDebug`    |
 | **Live Device Screen** | Android screen streamed into the VS Code sidebar — tap, swipe, and send keys without touching your phone |
@@ -39,7 +40,7 @@ Extension Host
                                             └── ScreenStreamer  (~15 fps PNG)
 ```
 
-→ [Full architecture & code walkthrough](PROJECT_STRUCTURE.md)
+[Full architecture & code walkthrough](PROJECT_STRUCTURE.md)
 
 ---
 
@@ -67,8 +68,8 @@ Extension Host
 
 ## Contributing
 
-- [CONTRIBUTING](CONTRIBUTING.md)
-- [CHANGELOG](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
 
 ---
 

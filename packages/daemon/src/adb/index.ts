@@ -257,6 +257,39 @@ export class AdbManager {
         if (!match) throw new Error(`Could not parse screen size from: ${output}`);
         return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
     }
+
+    async screenshot(serial: string): Promise<Buffer> {
+        return new Promise<Buffer>((resolve, reject) => {
+            execFile(
+                this.adbPath,
+                ['-s', serial, 'exec-out', 'screencap', '-p'],
+                { encoding: 'buffer', maxBuffer: 16 * 1024 * 1024 },
+                (err, stdout) => {
+                    if (err) { reject(err); return; }
+                    const buf = stdout as unknown as Buffer;
+                    if (!buf || buf.length === 0) { reject(new Error('Empty screencap output')); return; }
+                    resolve(buf);
+                }
+            );
+        });
+    }
+
+    async getRotation(serial: string): Promise<number> {
+        const out = await this.exec('-s', serial, 'shell', 'settings', 'get', 'system', 'user_rotation');
+        return parseInt(out.trim(), 10) || 0;
+    }
+
+    async setRotation(serial: string, rotation: number): Promise<void> {
+        await this.exec('-s', serial, 'shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0');
+        await this.exec('-s', serial, 'shell', 'settings', 'put', 'system', 'user_rotation', String(rotation));
+    }
+
+    async forceStop(serial: string, packageName: string): Promise<void> {
+        if (!/^[a-zA-Z][a-zA-Z0-9._]*$/.test(packageName)) {
+            throw new Error(`Invalid package name: ${packageName}`);
+        }
+        await this.exec('-s', serial, 'shell', 'am', 'force-stop', packageName);
+    }
 }
 
 function sleep(ms: number): Promise<void> {

@@ -11,7 +11,9 @@
     "compile": "npm run compile --workspaces --if-present",
     "watch": "npm run watch --workspaces --if-present",
     "build": "npm run compile",
-    "lint": "eslint \"packages/*/src/**/*.ts\"",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint \"packages/*/src/**/*.ts\" \"packages/*/test/**/*.js\" \"scripts/**/*.js\"",
+    "lint:fix": "npm run lint -- --fix",
     "clean": "npx rimraf packages/*/out"
   },
   "devDependencies": {

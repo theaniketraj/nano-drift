@@ -281,8 +281,8 @@ export class DaemonClient implements vscode.Disposable {
         return this.rpc<void>('adb.tap', { serial: this.activeDevice, x, y });
     }
 
-    async sendSwipe(x1: number, y1: number, x2: number, y2: number): Promise<void> {
-        return this.rpc<void>('adb.swipe', { serial: this.activeDevice, x1, y1, x2, y2 });
+    async sendSwipe(x1: number, y1: number, x2: number, y2: number, durationMs?: number): Promise<void> {
+        return this.rpc<void>('adb.swipe', { serial: this.activeDevice, x1, y1, x2, y2, durationMs });
     }
 
     async sendText(text: string): Promise<void> {
@@ -297,6 +297,21 @@ export class DaemonClient implements vscode.Disposable {
 
     async getScreenSize(serial: string): Promise<{ width: number; height: number }> {
         return this.rpc<{ width: number; height: number }>('screen.getSize', { serial });
+    }
+
+    async screenshot(): Promise<string> {
+        if (!this.activeDevice) throw new Error('No device selected.');
+        return this.rpc<string>('adb.screenshot', { serial: this.activeDevice });
+    }
+
+    async rotate(): Promise<void> {
+        if (!this.activeDevice) return;
+        return this.rpc<void>('adb.rotate', { serial: this.activeDevice });
+    }
+
+    async forceStop(packageName: string): Promise<void> {
+        if (!this.activeDevice) return;
+        return this.rpc<void>('adb.forceStop', { serial: this.activeDevice, packageName });
     }
 
     async stop(): Promise<void> {

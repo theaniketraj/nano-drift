@@ -31,6 +31,7 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
         // before the first frame arrives.
         const serial = daemonClient.getActiveDevice();
         if (serial) {
+            void webviewView.webview.postMessage({ type: 'deviceName', name: serial });
             daemonClient.getScreenSize(serial).then((size) => {
                 void webviewView.webview.postMessage({ type: 'screenSize', width: size.width, height: size.height });
             }).catch(() => {
@@ -43,6 +44,7 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
                 type: string;
                 x?: number; y?: number;
                 x1?: number; y1?: number; x2?: number; y2?: number;
+                duration?: number;
                 keycode?: number;
                 text?: string;
                 url?: string;
@@ -58,19 +60,19 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
                             message.x1 !== undefined && message.y1 !== undefined &&
                             message.x2 !== undefined && message.y2 !== undefined
                         ) {
-                            void daemonClient.sendSwipe(message.x1, message.y1, message.x2, message.y2);
+                            void daemonClient.sendSwipe(message.x1, message.y1, message.x2, message.y2, message.duration);
                         }
                         break;
                     case 'key':
-                        if (message.keycode !== undefined) {
-                            void daemonClient.sendKey(message.keycode);
-                        }
-                        break;
+                      if (message.keycode !== undefined) {
+                        daemonClient.sendKey(message.keycode).catch(() => undefined);
+                      }
+                      break;
                     case 'text':
-                        if (message.text) {
-                            void daemonClient.sendText(message.text);
-                        }
-                        break;
+                      if (message.text) {
+                        daemonClient.sendText(message.text).catch(() => undefined);
+                      }
+                      break;
                     case 'openUrl':
                         if (typeof message.url === 'string') {
                             void vscode.env.openExternal(vscode.Uri.parse(message.url, true));
@@ -85,6 +87,97 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
                     case 'runOnTheFly':
                         void vscode.commands.executeCommand('nanoDrift.runOnTheFly');
                         break;
+                  case 'screenshot': {
+                    void (async () => {
+                      try {
+                        const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+                        if (!folder) {
+                          void webviewView.webview.postMessage({
+                            type: 'toast',
+                            level: 'error',
+                            text: 'Open a workspace folder to save screenshots.'
+                          });
+                          return;
+                        }
+
+                        const pngBase64 = await daemonClient.screenshot();
+                        const buf = Buffer.from(pngBase64, 'base64');
+                        const ts = new Date().toISOString().split(':').join('-').split('.').join('-');
+                        const screenshotsDir = vscode.Uri.joinPath(folder, '.nano-drift', 'screenshots');
+                        await vscode.workspace.fs.createDirectory(screenshotsDir);
+                        const fileName = `screenshot-${ts}.png`;
+                        const outUri = vscode.Uri.joinPath(screenshotsDir, fileName);
+                        await vscode.workspace.fs.writeFile(outUri, new Uint8Array(buf));
+                        void webviewView.webview.postMessage({
+                          type: 'toast',
+                          level: 'success',
+                          text: `Saved ${fileName}`
+                        });
+                        const choice = await vscode.window.showInformationMessage(
+                          `Screenshot saved: .nano-drift/screenshots/${fileName}`,
+                          'Open'
+                        );
+                        if (choice === 'Open') {
+                          void vscode.commands.executeCommand('vscode.open', outUri);
+                        }
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        void webviewView.webview.postMessage({ type: 'toast', level: 'error', text: `Screenshot failed: ${msg}` });
+                        void vscode.window.showErrorMessage(`Screenshot failed: ${msg}`);
+                      }
+                    })();
+                    break;
+                  }
+                  case 'rotate':
+                    daemonClient.rotate()
+                      .then(() => webviewView.webview.postMessage({
+                        type: 'toast',
+                        level: 'success',
+                        text: 'Rotation toggled.'
+                      }))
+                      .catch((err: unknown) => {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        void webviewView.webview.postMessage({ type: 'toast', level: 'error', text: `Rotate failed: ${msg}` });
+                        void vscode.window.showErrorMessage(
+                          `Rotate failed: ${msg}`
+                        );
+                      });
+                    break;
+                  case 'killApp': {
+                    void (async () => {
+                      try {
+                        let pkg = vscode.workspace.getConfiguration('nanoDrift').get<string>('packageName', '').trim();
+                        if (!pkg) {
+                          const folderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                          if (folderPath) {
+                            pkg = await daemonClient.detectPackage(folderPath);
+                          }
+                        }
+                        if (!pkg) {
+                          void vscode.window.showWarningMessage('Set "nanoDrift.packageName" in settings to use Kill App.');
+                          void webviewView.webview.postMessage({
+                            type: 'toast',
+                            level: 'error',
+                            text: 'Set nanoDrift.packageName to use Kill App.'
+                          });
+                          return;
+                        }
+                        await daemonClient.forceStop(pkg);
+                        void webviewView.webview.postMessage({
+                          type: 'toast',
+                          level: 'success',
+                          text: `Force-stopped ${pkg}`
+                        });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        void webviewView.webview.postMessage({ type: 'toast', level: 'error', text: `Kill failed: ${msg}` });
+                        void vscode.window.showErrorMessage(
+                          `Kill failed: ${msg}`
+                        );
+                      }
+                    })();
+                    break;
+                  }
                 }
             },
             undefined,
@@ -244,6 +337,36 @@ function buildWebviewHtml(daemonPort: number): string {
       border: 3px solid rgba(255,255,255,0.08);
       border-top-color: var(--vscode-progressBar-background, #007acc);
       animation: spin 0.75s linear infinite;
+    }
+
+    /* ── TOAST ───────────────────────────────────────────────────────── */
+    #toast {
+      position: absolute;
+      right: 16px;
+      bottom: 44px;
+      max-width: min(320px, calc(100vw - 32px));
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: var(--vscode-notifications-background, rgba(20,20,20,0.96));
+      color: var(--vscode-foreground);
+      font-size: 12px;
+      line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 30;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.toast-success {
+      border-color: rgba(76,175,80,0.45);
+      background: color-mix(in srgb, var(--vscode-sideBar-background) 78%, #1d4d24 22%);
+    }
+    #toast.toast-error {
+      border-color: rgba(224,82,82,0.45);
+      background: color-mix(in srgb, var(--vscode-sideBar-background) 78%, #5a1d1d 22%);
     }
 
     /* ── PHONE BOTTOM CHROME ─────────────────────────────────────────── */
@@ -481,6 +604,14 @@ function buildWebviewHtml(daemonPort: number): string {
       <div class="tb-group" id="tb-sys">
         <div class="tb-group-label">System</div>
         <div class="tb-row">
+          <button class="tb-btn" id="tbk-screenshot" title="Take screenshot">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="12" r="4"/></svg>
+            Shot
+          </button>
+          <button class="tb-btn" id="tbk-rotate" title="Rotate screen">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            Rotate
+          </button>
           <button class="tb-btn" id="tbk-power" title="Power (keycode 26)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 2v10"/><path d="M5.636 5.636a9 9 0 1 0 12.728 0"/></svg>
             Power
@@ -507,12 +638,18 @@ function buildWebviewHtml(daemonPort: number): string {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
             Run
           </button>
+          <button class="tb-btn" id="tbk-kill" title="Force-stop app">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Kill
+          </button>
         </div>
       </div>
 
     </div>
   </div>
 </div>
+
+<div id="toast" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 (function () {
@@ -575,6 +712,19 @@ function buildWebviewHtml(daemonPort: number): string {
   var badgeDot     = document.getElementById('badge-dot');
   var badgeLabel   = document.getElementById('badge-label');
   var fpsDisplay   = document.getElementById('fps-display');
+  var toastEl      = document.getElementById('toast');
+  var toastTimer   = null;
+
+  function showToast(text, level) {
+    if (!toastEl) return;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastEl.textContent = text;
+    toastEl.className = '';
+    toastEl.classList.add('show', level === 'error' ? 'toast-error' : 'toast-success');
+    toastTimer = setTimeout(function() {
+      toastEl.className = '';
+    }, level === 'error' ? 4200 : 2600);
+  }
 
   function setState(name, detail) {
     currentState = name;
@@ -703,7 +853,7 @@ function buildWebviewHtml(daemonPort: number): string {
         else dctx.clearRect(0, 0, dragCanvas.width, dragCanvas.height);
       })();
       vscode.postMessage({ type: 'swipe',
-        x1: captured.x, y1: captured.y, x2: captured.x, y2: captured.y });
+        x1: captured.x, y1: captured.y, x2: captured.x, y2: captured.y, duration: 800 });
     }, 600);
   }
 
@@ -816,6 +966,22 @@ function buildWebviewHtml(daemonPort: number): string {
   });
 
   // ── GITHUB ────────────────────────────────────────────────────────────
+    // ── SCREENSHOT ────────────────────────────────────────────────────────
+    document.getElementById('tbk-screenshot').addEventListener('click', function() {
+      vscode.postMessage({ type: 'screenshot' });
+    });
+
+    // ── ROTATE ────────────────────────────────────────────────────────────
+    document.getElementById('tbk-rotate').addEventListener('click', function() {
+      vscode.postMessage({ type: 'rotate' });
+    });
+
+    // ── KILL APP ──────────────────────────────────────────────────────────
+    document.getElementById('tbk-kill').addEventListener('click', function() {
+      vscode.postMessage({ type: 'killApp' });
+    });
+
+    // ── GITHUB ────────────────────────────────────────────────────────────
   document.getElementById('btn-github').addEventListener('click', function() {
     vscode.postMessage({ type: 'openUrl', url: 'https://github.com/theaniketraj/nano-drift' });
   });
@@ -831,10 +997,12 @@ function buildWebviewHtml(daemonPort: number): string {
     if (!msg) return;
     if (msg.type === 'screenSize') resizeCanvas(msg.width, msg.height);
     if (msg.type === 'deviceName') document.getElementById('device-name').textContent = msg.name || 'Unknown';
+    if (msg.type === 'toast') showToast(msg.text || '', msg.level || 'success');
   });
 
   // ── WEBSOCKET — binary PNG stream ─────────────────────────────────────
   var ws;
+  var wsHadError = false;
   function connect() {
     setState('connecting');
     ws = new WebSocket('ws://localhost:${daemonPort}/screen');
@@ -842,13 +1010,20 @@ function buildWebviewHtml(daemonPort: number): string {
 
     ws.onopen = function() { setState('waiting'); };
     ws.onmessage = function(ev) { onFrame(ev.data); };
-    ws.onclose = function() {
-      if (currentState === 'streaming') setState('paused');
-      else setState('reconnecting');
-      setTimeout(connect, 2000);
-    };
     ws.onerror = function() {
+      wsHadError = true;
       setState('error');
+    };
+    ws.onclose = function() {
+      if (wsHadError) {
+        // onerror already set the error state — keep it visible, then retry
+        wsHadError = false;
+        setTimeout(connect, 3000);
+      } else {
+        if (currentState === 'streaming') setState('paused');
+        else setState('reconnecting');
+        setTimeout(connect, 2000);
+      }
     };
   }
 

@@ -62,7 +62,6 @@ export class DiagnosticsManager implements vscode.Disposable {
      * otherwise tries to resolve it against workspace folders.
      */
     private resolveUri(filePath: string): vscode.Uri {
-        const normalized = filePath.replace(/\\/g, '/');
         // Absolute path check: starts with / or drive letter on Windows
         if (path.isAbsolute(filePath) || /^[A-Za-z]:/.test(filePath)) {
             return vscode.Uri.file(filePath);

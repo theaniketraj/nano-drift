@@ -113,7 +113,7 @@ export function parseGradleLine(line: string): BuildError | undefined {
     // Kotlin format (new): "e: file:///abs/path.kt:10:5: message"
     // Kotlin format (old): "e: /abs/path.kt: (10, 5): message"
     const kotlinNew = trimmed.match(
-        /^([ew]):\s+(?:file:\/\/\/)?(.+?):(\d+):(\d+):\s+(.+)$/
+        /^([ew]):\s+(?:file:\/\/)?(.+?):(\d+):(\d+):\s+(.+)$/
     );
     if (kotlinNew) {
         const [, level, file, lineStr, colStr, msg] = kotlinNew;
