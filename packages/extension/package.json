@@ -3,9 +3,23 @@
   "displayName": "Nano Drift",
   "description": "Android development at your own pace — build, deploy, and mirror your device inside VS Code.",
   "version": "0.1.0",
-  "publisher": "nano-drift",
-  "private": true,
+  "publisher": "theaniketraj",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theaniketraj/nano-drift.git"
+  },
+  "bugs": {
+    "url": "https://github.com/theaniketraj/nano-drift/issues"
+  },
+  "homepage": "https://theaniketraj.github.io/nano-drift",
+  "files": [
+    "out/extension.js",
+    "daemon/out/index.js",
+    "images/**",
+    "package.json",
+    "LICENSE"
+  ],
   "engines": {
     "vscode": "^1.87.0",
     "node": ">=18.0.0"
@@ -138,13 +152,16 @@
     "compile": "tsc -p ./",
     "watch": "tsc --watch -p ./",
     "build": "npm run compile",
-    "vscode:prepublish": "npm run compile",
-    "package": "vsce package"
+    "bundle:extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --minify --outfile=out/extension.js",
+    "bundle:daemon": "esbuild ../daemon/src/index.ts --bundle --platform=node --target=node18 --format=cjs --minify --outfile=daemon/out/index.js",
+    "vscode:prepublish": "npm run compile && npm run bundle:extension && npm run bundle:daemon",
+    "package": "vsce package --no-yarn --no-dependencies --allow-star-activation"
   },
   "dependencies": {
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "esbuild": "^0.25.10",
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.87.0",
     "@types/ws": "^8.5.10"

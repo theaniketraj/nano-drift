@@ -46,6 +46,7 @@ interface RpcMessage {
 export class DaemonClient implements vscode.Disposable {
     private ws: WebSocket | undefined;
     private activeDevice: string | undefined;
+    private readonly extensionRoot: string;
     private readonly port: number;
     private daemonProcess: cp.ChildProcess | undefined;
     private readonly outputChannel: vscode.OutputChannel;
@@ -58,6 +59,7 @@ export class DaemonClient implements vscode.Disposable {
 
     constructor(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('nanoDrift');
+        this.extensionRoot = context.extensionPath;
         this.port = config.get<number>('daemonPort', 27183);
         this.outputChannel = vscode.window.createOutputChannel('Nano Drift');
         context.subscriptions.push(this.outputChannel, this._onBuildProgress, this._onDeviceListChanged);
@@ -107,7 +109,7 @@ export class DaemonClient implements vscode.Disposable {
     }
 
     private spawnDaemon(): Promise<void> {
-        const daemonEntry = path.join(__dirname, '..', '..', '..', 'daemon', 'out', 'index.js');
+        const daemonEntry = path.join(this.extensionRoot, 'daemon', 'out', 'index.js');
         this.outputChannel.appendLine(`[nano-drift] Spawning daemon: node "${daemonEntry}" --port ${this.port}`);
 
         return new Promise((resolve, reject) => {
