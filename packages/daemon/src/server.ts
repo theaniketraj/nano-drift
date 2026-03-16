@@ -2,7 +2,7 @@ import * as http from 'http';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { AdbManager, DeviceInfo } from './adb';
 import { GradleRunner, BuildError } from './gradle';
-import { ScreenStreamer } from './screen';
+import { ScreenStreamer, H264ScreenStreamer } from './screen';
 import { FileWatcher } from './watcher';
 
 type RpcHandler = (params: unknown) => Promise<unknown>;
@@ -36,6 +36,7 @@ export class DaemonServer {
     private readonly adb: AdbManager;
     private readonly gradle: GradleRunner;
     private readonly screen: ScreenStreamer;
+    private readonly h264Screen: H264ScreenStreamer;
     private readonly handlers = new Map<string, RpcHandler>();
 
     /** All open RPC WebSocket connections — used for push broadcasts. */
@@ -60,12 +61,15 @@ export class DaemonServer {
         this.adb = new AdbManager();
         this.gradle = new GradleRunner();
         this.screen = new ScreenStreamer(this.adb);
+        this.h264Screen = new H264ScreenStreamer(this.adb);
 
         this.registerHandlers();
 
         this.wss.on('connection', (ws, req) => {
             const url = req.url ?? '/';
-            if (url.startsWith('/screen')) {
+            if (url.startsWith('/screen-h264')) {
+                this.h264Screen.addClient(ws);
+            } else if (url.startsWith('/screen')) {
                 this.screen.addClient(ws);
             } else {
                 this.rpcClients.add(ws);
@@ -383,6 +387,7 @@ export class DaemonServer {
         }
         this.stopAllWatchers();
         this.screen.stop();
+        this.h264Screen.stop();
         this.wss.close();
         this.httpServer.close();
     }

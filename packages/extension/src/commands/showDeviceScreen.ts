@@ -23,9 +23,10 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
         const { daemonClient } = this._deps;
         const config = vscode.workspace.getConfiguration('nanoDrift');
         const daemonPort = config.get<number>('daemonPort', 27183);
+        const streamCodec = config.get<'png' | 'h264'>('streamCodec', 'png');
 
         webviewView.webview.options = { enableScripts: true };
-        webviewView.webview.html = buildWebviewHtml(daemonPort);
+        webviewView.webview.html = buildWebviewHtml(daemonPort, streamCodec);
 
         // Send the current device screen resolution so the canvas sizes correctly
         // before the first frame arrives.
@@ -191,7 +192,7 @@ export class DeviceScreenViewProvider implements vscode.WebviewViewProvider {
     }
 }
 
-function buildWebviewHtml(daemonPort: number): string {
+function buildWebviewHtml(daemonPort: number, streamCodec: 'png' | 'h264'): string {
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -656,6 +657,7 @@ function buildWebviewHtml(daemonPort: number): string {
   'use strict';
 
   var vscode     = acquireVsCodeApi();
+  var streamCodec = '${streamCodec}';
   var canvas     = document.getElementById('screen-canvas');
   var dragCanvas = document.getElementById('drag-canvas');
   var ctx        = canvas.getContext('2d');
@@ -819,6 +821,103 @@ function buildWebviewHtml(daemonPort: number): string {
       };
       img.src = url;
     });
+  }
+
+  // ── H264 (experimental) decode path ─────────────────────────────────
+  var decoder = null;
+  var h264Buf = new Uint8Array(0);
+  var h264Ts = 0;
+
+  function fallbackToPng(reason) {
+    if (streamCodec !== 'h264') return;
+    streamCodec = 'png';
+    setState('reconnecting', 'Falling back to PNG stream...');
+    showToast('H.264 fallback: ' + reason + ' Using PNG stream.', 'error');
+  }
+
+  function concatU8(a, b) {
+    var out = new Uint8Array(a.length + b.length);
+    out.set(a, 0);
+    out.set(b, a.length);
+    return out;
+  }
+
+  function findStartCode(data, from) {
+    for (var i = from; i < data.length - 3; i++) {
+      if (data[i] === 0 && data[i + 1] === 0 && (data[i + 2] === 1 || (data[i + 2] === 0 && data[i + 3] === 1))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function initDecoder() {
+    if (decoder) return true;
+    if (typeof VideoDecoder === 'undefined' || typeof EncodedVideoChunk === 'undefined') {
+      return false;
+    }
+    try {
+      decoder = new VideoDecoder({
+        output: function(frame) {
+          tickFps();
+          resizeCanvas(frame.displayWidth, frame.displayHeight);
+          ctx.drawImage(frame, 0, 0);
+          frame.close();
+          if (currentState !== 'streaming') setState('streaming');
+        },
+        error: function() {
+          fallbackToPng('decoder error.');
+        },
+      });
+      decoder.configure({ codec: 'avc1.42E01E', optimizeForLatency: true, hardwareAcceleration: 'prefer-hardware' });
+      return true;
+    } catch {
+      decoder = null;
+      return false;
+    }
+  }
+
+  function feedH264Chunk(ab) {
+    if (!initDecoder()) return false;
+    var incoming = new Uint8Array(ab);
+    h264Buf = concatU8(h264Buf, incoming);
+
+    var offset = findStartCode(h264Buf, 0);
+    if (offset < 0) return true;
+
+    while (true) {
+      var start = findStartCode(h264Buf, offset);
+      if (start < 0) break;
+      var next = findStartCode(h264Buf, start + 3);
+      if (next < 0) break;
+
+      var scLen = h264Buf[start + 2] === 1 ? 3 : 4;
+      var nal = h264Buf.slice(start + scLen, next);
+      if (nal.length > 0) {
+        var nalType = nal[0] & 0x1f;
+        var packet = new Uint8Array(4 + nal.length);
+        packet.set([0, 0, 0, 1], 0);
+        packet.set(nal, 4);
+        try {
+          decoder.decode(new EncodedVideoChunk({
+            type: nalType === 5 ? 'key' : 'delta',
+            timestamp: h264Ts,
+            duration: 33333,
+            data: packet,
+          }));
+          h264Ts += 33333;
+        } catch {
+          // Ignore occasional non-frame NAL decode errors.
+        }
+      }
+      offset = next;
+    }
+
+    h264Buf = h264Buf.slice(offset);
+    if (h264Buf.length > 2 * 1024 * 1024) {
+      h264Buf = h264Buf.slice(-512 * 1024);
+    }
+    return true;
   }
 
   // ── MOUSE / TOUCH INPUT ───────────────────────────────────────────────
@@ -1005,11 +1104,25 @@ function buildWebviewHtml(daemonPort: number): string {
   var wsHadError = false;
   function connect() {
     setState('connecting');
-    ws = new WebSocket('ws://localhost:${daemonPort}/screen');
+    if (streamCodec === 'h264' && !initDecoder()) {
+      fallbackToPng('WebCodecs unavailable in this VS Code runtime.');
+    }
+    var path = streamCodec === 'h264' ? '/screen-h264' : '/screen';
+    ws = new WebSocket('ws://localhost:${daemonPort}' + path);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = function() { setState('waiting'); };
-    ws.onmessage = function(ev) { onFrame(ev.data); };
+    ws.onmessage = function(ev) {
+      if (streamCodec === 'h264') {
+        if (!feedH264Chunk(ev.data)) {
+          fallbackToPng('decoder init failed.');
+          ws.close();
+          return;
+        }
+      } else {
+        onFrame(ev.data);
+      }
+    };
     ws.onerror = function() {
       wsHadError = true;
       setState('error');

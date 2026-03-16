@@ -115,6 +115,12 @@
           "type": "string",
           "default": "",
           "description": "Android application package name (e.g. com.example.myapp). Leave empty to auto-detect from AndroidManifest.xml."
+        },
+        "nanoDrift.streamCodec": {
+          "type": "string",
+          "enum": ["png", "h264"],
+          "default": "png",
+          "description": "Screen streaming codec for Device Screen view. 'png' is stable and works everywhere. 'h264' is experimental and uses WebCodecs when supported."
         }
       }
     },

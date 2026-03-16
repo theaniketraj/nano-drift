@@ -1,7 +1,14 @@
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import * as path from 'path';
 import { WebSocket } from 'ws';
 import { AdbManager } from '../adb';
+
+function resolveAdbBin(): string {
+    const sdk = process.env['ANDROID_HOME'] ?? process.env['ANDROID_SDK_ROOT'] ?? '';
+    return sdk
+        ? path.join(sdk, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb')
+        : 'adb';
+}
 
 /**
  * Streams device screen frames to all connected WebSocket /screen clients.
@@ -62,10 +69,7 @@ export class ScreenStreamer {
     }
 
     private screencap(serial: string): Promise<Buffer> {
-        const sdk = process.env['ANDROID_HOME'] ?? process.env['ANDROID_SDK_ROOT'] ?? '';
-        const adbBin = sdk
-            ? path.join(sdk, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb')
-            : 'adb';
+        const adbBin = resolveAdbBin();
 
         return new Promise<Buffer>((resolve, reject) => {
             execFile(
@@ -96,6 +100,79 @@ export class ScreenStreamer {
             clearTimeout(this.tickTimer);
             this.tickTimer = undefined;
         }
+    }
+
+    stop(): void {
+        this.stopCapture();
+        this.clients.clear();
+    }
+}
+
+/**
+ * Experimental H.264 stream via `adb exec-out screenrecord --output-format=h264 -`.
+ * This keeps the same /screen transport model while reducing host CPU vs PNG snapshots.
+ */
+export class H264ScreenStreamer {
+    private readonly clients = new Set<WebSocket>();
+    private captureProcess: ReturnType<typeof spawn> | undefined;
+    private restartTimer: ReturnType<typeof setTimeout> | undefined;
+
+    constructor(private readonly adb: AdbManager) {}
+
+    addClient(ws: WebSocket): void {
+        this.clients.add(ws);
+        ws.on('close', () => {
+            this.clients.delete(ws);
+            if (this.clients.size === 0) this.stopCapture();
+        });
+        if (this.clients.size === 1) this.startCapture();
+    }
+
+    private startCapture(): void {
+        if (this.captureProcess || this.clients.size === 0) return;
+
+        const serial = this.adb.getActiveDevice();
+        if (!serial) {
+            this.restartTimer = setTimeout(() => this.startCapture(), 1_000);
+            return;
+        }
+
+        const adbBin = resolveAdbBin();
+        const child = spawn(adbBin, ['-s', serial, 'exec-out', 'screenrecord', '--output-format=h264', '-'], {
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        this.captureProcess = child;
+
+        child.stdout?.on('data', (chunk: Buffer) => {
+            for (const client of this.clients) {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(chunk);
+                }
+            }
+        });
+
+        child.on('close', () => {
+            this.captureProcess = undefined;
+            if (this.clients.size > 0) {
+                this.restartTimer = setTimeout(() => this.startCapture(), 1_000);
+            }
+        });
+
+        child.on('error', () => {
+            this.captureProcess = undefined;
+            if (this.clients.size > 0) {
+                this.restartTimer = setTimeout(() => this.startCapture(), 1_500);
+            }
+        });
+    }
+
+    private stopCapture(): void {
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = undefined;
+        }
+        this.captureProcess?.kill();
+        this.captureProcess = undefined;
     }
 
     stop(): void {
