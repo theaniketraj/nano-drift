@@ -167,15 +167,15 @@ document.getElementById("nav-features-link").addEventListener("click", (e) => {
     );
   }
 });
-document.getElementById("hero-start-btn").addEventListener("click", (e) => {
+document.getElementById("hero-start-btn")?.addEventListener("click", (e) => {
   e.preventDefault();
   goDocs("getting-started");
 });
-document.getElementById("hero-docs-btn").addEventListener("click", (e) => {
+document.getElementById("hero-docs-btn")?.addEventListener("click", (e) => {
   e.preventDefault();
   goDocs("index");
 });
-document.getElementById("cta-start-btn").addEventListener("click", (e) => {
+document.getElementById("cta-start-btn")?.addEventListener("click", (e) => {
   e.preventDefault();
   goDocs("getting-started");
 });
@@ -435,6 +435,7 @@ $hamburger.addEventListener("click", () => {
     : openMobileNav();
 });
 
+document.getElementById("mobile-nav-close")?.addEventListener("click", closeMobileNav);
 $mobileNavBackdrop.addEventListener("click", closeMobileNav);
 
 document.getElementById("mobile-logo-link").addEventListener("click", (e) => {
@@ -526,3 +527,35 @@ window.addEventListener(
 
   setTimeout(typeNext, START_DELAY);
 })();
+
+// Dropdown Logic
+  const dropdownToggle = document.getElementById("hero-dropdown-toggle");
+  const dropdownMenu = document.getElementById("hero-dropdown-menu");
+  
+  if (dropdownToggle && dropdownMenu) {
+    dropdownToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isExpanded = dropdownToggle.getAttribute("aria-expanded") === "true";
+      dropdownToggle.setAttribute("aria-expanded", String(!isExpanded));
+      dropdownMenu.classList.toggle("show");
+    });
+    
+    document.addEventListener("click", (e) => {
+      if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownToggle.setAttribute("aria-expanded", "false");
+        dropdownMenu.classList.remove("show");
+      } else if (e.target.closest(".dropdown-item")) {
+        dropdownToggle.setAttribute("aria-expanded", "false");
+        dropdownMenu.classList.remove("show");
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && dropdownMenu.classList.contains("show")) {
+        dropdownToggle.setAttribute("aria-expanded", "false");
+        dropdownMenu.classList.remove("show");
+        dropdownToggle.focus();
+      }
+    });
+  }

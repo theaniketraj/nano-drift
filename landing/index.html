@@ -139,14 +139,23 @@
     <nav class="mobile-nav-panel" id="mobile-nav-panel" aria-label="Mobile navigation" aria-hidden="true">
         <div class="mobile-nav-header">
             <a class="nav-logo" href="#" id="mobile-logo-link">
-                <div class="logo-mark">N</div>
-                <span>Nano Drift</span>
+                <img src="drift.svg" alt="Nano Drift" class="logo-svg">
+            </a>
+            <button class="mobile-close-btn" id="mobile-nav-close" aria-label="Close navigation">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="mobile-nav-body">
+            <a class="mobile-nav-item" href="#features" id="mobile-feat-link">
+                <i class="fa-solid fa-star"></i> Features
+            </a>
+            <button class="mobile-nav-item" id="mobile-docs-btn">
+                <i class="fa-solid fa-book"></i> Docs
+            </button>
+            <a class="mobile-nav-item" href="https://github.com/theaniketraj/nano-drift" target="_blank" rel="noopener">
+                <i class="fa-brands fa-github"></i> GitHub ↗
             </a>
         </div>
-        <a class="mobile-nav-item" href="#features" id="mobile-feat-link">Features</a>
-        <button class="mobile-nav-item" id="mobile-docs-btn">Docs</button>
-        <a class="mobile-nav-item" href="https://github.com/theaniketraj/nano-drift" target="_blank"
-            rel="noopener">GitHub ↗</a>
     </nav>
 
     <div id="landing">
@@ -181,14 +190,37 @@
                             terminals. No manual installs. No context switching.
                         </p>
                         <div class="hero-actions">
-                            <a class="btn-primary" href="#" id="hero-start-btn">Get Started <span class="btn-arr"
-                                    aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+                            <div class="dropdown" id="hero-actions-dropdown">
+                                <button class="btn-primary dropdown-btn" id="hero-dropdown-toggle" aria-haspopup="true"
+                                    aria-expanded="false">
+                                    Get Nano Drift
+                                    <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                         stroke-linejoin="round">
-                                        <path d="M3 8h10" />
-                                        <path d="M9 4l4 4-4 4" />
-                                    </svg></span></a>
-                            <a class="btn-secondary" href="#" id="hero-docs-btn">Read the Docs</a>
+                                        <path d="M6 9l6 6 6-6" />
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu" id="hero-dropdown-menu">
+                                    <a class="dropdown-item"
+                                        href="https://marketplace.visualstudio.com/items?itemName=theaniketraj.nano-drift"
+                                        target="_blank">
+                                        <i class="fa-solid fa-store"></i>
+                                        <div class="dropdown-text">
+                                            <span>VS Code Marketplace</span>
+                                            <small>Official Microsoft registry</small>
+                                        </div>
+                                    </a>
+                                    <a class="dropdown-item"
+                                        href="https://open-vsx.org/extension/theaniketraj/nano-drift" target="_blank">
+                                        <i class="fa-solid fa-box-open"></i>
+                                        <div class="dropdown-text">
+                                            <span>Open VSX Registry</span>
+                                            <small>For VSCodium & others</small>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                            <a class="btn-secondary" href="#" id="hero-docs-btn">Explore Docs</a>
                         </div>
                     </div>
 
