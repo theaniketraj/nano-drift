@@ -71,7 +71,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     registerCommands(context, { context, statusBarManager, daemonClient, sdkPath, diagnosticsManager });
 
     await vscode.commands.executeCommand('setContext', 'nanoDrift.active', true);
+    await refreshGitHubAuthContext();
     statusBarManager.setIdle();
+
+    await maybeShowFirstRunOnboarding(context);
 
     // ------------------------------------------------------------------ //
     //  Restore last-used device from workspace state
@@ -181,5 +184,40 @@ async function maybeStartWatcherForFolder(client: DaemonClient, folderPath: stri
         console.log(`[nano-drift] File watcher started for: ${folderPath}`);
     } catch (err) {
         console.warn('[nano-drift] Could not start file watcher:', err);
+    }
+}
+
+async function maybeShowFirstRunOnboarding(context: vscode.ExtensionContext): Promise<void> {
+    const key = 'nanoDrift.onboardingShown.v1';
+    const alreadyShown = context.globalState.get<boolean>(key, false);
+    if (alreadyShown) return;
+
+    await context.globalState.update(key, true);
+
+    const action = await vscode.window.showInformationMessage(
+        'Welcome to Nano Drift. Open the quick start guide and complete GitHub sign-in to get started.',
+        'Get Started',
+        'Sign in with GitHub',
+        'Dismiss'
+    );
+
+    if (action === 'Get Started') {
+        await vscode.commands.executeCommand('nanoDrift.getStarted');
+        return;
+    }
+
+    if (action === 'Sign in with GitHub') {
+        await vscode.commands.executeCommand('nanoDrift.signInGitHub');
+    }
+}
+
+async function refreshGitHubAuthContext(): Promise<void> {
+    try {
+        const session = await vscode.authentication.getSession('github', ['read:user'], {
+            createIfNone: false,
+        });
+        await vscode.commands.executeCommand('setContext', 'nanoDrift.githubAuthed', Boolean(session));
+    } catch {
+        await vscode.commands.executeCommand('setContext', 'nanoDrift.githubAuthed', false);
     }
 }

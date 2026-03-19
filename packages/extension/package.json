@@ -18,7 +18,8 @@
     "daemon/out/index.js",
     "images/**",
     "package.json",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "engines": {
     "vscode": "^1.87.0",
@@ -94,6 +95,18 @@
         "command": "nanoDrift.stopDaemon",
         "title": "Stop Daemon",
         "category": "Android"
+      },
+      {
+        "command": "nanoDrift.getStarted",
+        "title": "Get Started",
+        "category": "Nano Drift",
+        "icon": "$(book)"
+      },
+      {
+        "command": "nanoDrift.signInGitHub",
+        "title": "Sign in with GitHub",
+        "category": "Nano Drift",
+        "icon": "$(github)"
       }
     ],
     "configuration": {
