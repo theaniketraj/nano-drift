@@ -45,4 +45,4 @@ communicate over a lightweight JSON-RPC socket.
 - VS Code Marketplace: https://marketplace.visualstudio.com/search?term=nano+drift
 - License: MIT
 - Author: Aniket Raj (https://github.com/theaniketraj)
-- Version: 0.1.0
+- Version: 0.2.0

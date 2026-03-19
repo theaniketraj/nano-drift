@@ -2,7 +2,7 @@
   "name": "nano-drift",
   "displayName": "Nano Drift",
   "description": "Android development at your own pace — build, deploy, and mirror your device inside VS Code.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "theaniketraj",
   "license": "MIT",
   "repository": {

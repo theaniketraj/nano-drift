@@ -1,6 +1,6 @@
 {
   "name": "@nano-drift/daemon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Nano Drift — build and ADB orchestration daemon.",
   "main": "./out/index.js",

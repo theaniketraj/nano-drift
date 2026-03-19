@@ -1,6 +1,6 @@
 # Project Structure — Nano Drift
 
-**v0.1.0** · npm workspaces monorepo · TypeScript throughout
+**v0.2.0** · npm workspaces monorepo · TypeScript throughout
 
 ---
 

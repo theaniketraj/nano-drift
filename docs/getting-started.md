@@ -61,7 +61,7 @@ npm run compile
 cd packages/extension && npx vsce package
 
 # Install it
-code --install-extension nano-drift-0.1.0.vsix
+code --install-extension nano-drift-0.2.0.vsix
 ```
 
 ### From source (development mode)
